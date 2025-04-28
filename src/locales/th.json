@@ -1,0 +1,30 @@
+{
+  "settings": {
+    "language": {
+      "title": "ตั้งค่าภาษา",
+      "selectLabel": "เลือกภาษา"
+    }
+  },
+  "bottomBar": {
+    "chat": "แชท",
+    "map": "แผนที่",
+    "info": "ข้อมูล",
+    "language": "ภาษา"
+  },
+  "map": {
+    "categories": {
+      "all": "ทั้งหมด",
+      "tour": "ท่องเที่ยว",
+      "conveni": "ร้านสะดวกซื้อ",
+      "essentials": "ของใช้ประจำวัน",
+      "laundry": "ซักผ้า",
+      "parking": "ที่จอดรถ",
+      "restaurant": "ร้านอาหาร",
+      "cafe": "คาเฟ่"
+    },
+    "panel": {
+      "websiteLink": "เว็บไซต์ทางการ",
+      "googleMapLink": "Google Map"
+    }
+  }
+}

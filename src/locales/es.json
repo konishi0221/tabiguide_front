@@ -1,0 +1,30 @@
+{
+  "settings": {
+    "language": {
+      "title": "Configuración de idioma",
+      "selectLabel": "Seleccionar idioma"
+    }
+  },
+  "bottomBar": {
+    "chat": "Chat",
+    "map": "Mapa",
+    "info": "Info",
+    "language": "Idioma"
+  },
+  "map": {
+    "categories": {
+      "all": "Todo",
+      "tour": "Turismo",
+      "conveni": "Tienda",
+      "essentials": "Productos diarios",
+      "laundry": "Lavandería",
+      "parking": "Estacionamiento",
+      "restaurant": "Restaurante",
+      "cafe": "Café"
+    },
+    "panel": {
+      "websiteLink": "Sitio oficial",
+      "googleMapLink": "Google Map"
+    }
+  }
+}

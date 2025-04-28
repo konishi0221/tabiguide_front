@@ -1,0 +1,30 @@
+{
+  "settings": {
+    "language": {
+      "title": "言語設定",
+      "selectLabel": "言語を選択"
+    }
+  },
+  "bottomBar": {
+    "chat": "チャット",
+    "map": "周辺マップ",
+    "info": "基本情報",
+    "language": "翻訳"
+  },
+  "map": {
+    "categories": {
+      "all": "全て",
+      "tour": "観光",
+      "conveni": "コンビニ",
+      "essentials": "日用品",
+      "laundry": "ランドリー",
+      "parking": "駐車場",
+      "restaurant": "レストラン",
+      "cafe": "カフェ"
+    },
+    "panel": {
+      "websiteLink": "公式サイト",
+      "googleMapLink": "Google Map"
+    }
+  }
+}

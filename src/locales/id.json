@@ -1,0 +1,30 @@
+{
+  "settings": {
+    "language": {
+      "title": "Pengaturan Bahasa",
+      "selectLabel": "Pilih bahasa"
+    }
+  },
+  "bottomBar": {
+    "chat": "Obrolan",
+    "map": "Peta",
+    "info": "Info",
+    "language": "Bahasa"
+  },
+  "map": {
+    "categories": {
+      "all": "Semua",
+      "tour": "Wisata",
+      "conveni": "Toko Serba Ada",
+      "essentials": "Kebutuhan Harian",
+      "laundry": "Binatu",
+      "parking": "Parkir",
+      "restaurant": "Restoran",
+      "cafe": "Kafe"
+    },
+    "panel": {
+      "websiteLink": "Situs Resmi",
+      "googleMapLink": "Google Map"
+    }
+  }
+}

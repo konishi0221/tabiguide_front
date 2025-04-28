@@ -1,0 +1,30 @@
+{
+  "settings": {
+    "language": {
+      "title": "Cài đặt ngôn ngữ",
+      "selectLabel": "Chọn ngôn ngữ"
+    }
+  },
+  "bottomBar": {
+    "chat": "Trò chuyện",
+    "map": "Bản đồ",
+    "info": "Thông tin",
+    "language": "Ngôn ngữ"
+  },
+  "map": {
+    "categories": {
+      "all": "Tất cả",
+      "tour": "Tham quan",
+      "conveni": "Cửa hàng tiện lợi",
+      "essentials": "Đồ thiết yếu",
+      "laundry": "Giặt ủi",
+      "parking": "Bãi đậu xe",
+      "restaurant": "Nhà hàng",
+      "cafe": "Quán cà phê"
+    },
+    "panel": {
+      "websiteLink": "Trang chính thức",
+      "googleMapLink": "Google Map"
+    }
+  }
+}

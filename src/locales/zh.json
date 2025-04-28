@@ -1,0 +1,30 @@
+{
+  "settings": {
+    "language": {
+      "title": "语言设置",
+      "selectLabel": "选择语言"
+    }
+  },
+  "bottomBar": {
+    "chat": "聊天",
+    "map": "地图",
+    "info": "基本信息",
+    "language": "语言"
+  },
+  "map": {
+    "categories": {
+      "all": "全部",
+      "tour": "观光",
+      "conveni": "便利店",
+      "essentials": "日用品",
+      "laundry": "洗衣房",
+      "parking": "停车场",
+      "restaurant": "餐厅",
+      "cafe": "咖啡馆"
+    },
+    "panel": {
+      "websiteLink": "官方网站",
+      "googleMapLink": "Google 地图"
+    }
+  }
+}

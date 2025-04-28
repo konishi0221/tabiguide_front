@@ -1,0 +1,30 @@
+{
+  "settings": {
+    "language": {
+      "title": "언어 설정",
+      "selectLabel": "언어 선택"
+    }
+  },
+  "bottomBar": {
+    "chat": "채팅",
+    "map": "지도",
+    "info": "정보",
+    "language": "언어"
+  },
+  "map": {
+    "categories": {
+      "all": "전체",
+      "tour": "관광",
+      "conveni": "편의점",
+      "essentials": "생활용품",
+      "laundry": "세탁",
+      "parking": "주차장",
+      "restaurant": "레스토랑",
+      "cafe": "카페"
+    },
+    "panel": {
+      "websiteLink": "공식 사이트",
+      "googleMapLink": "구글 지도"
+    }
+  }
+}

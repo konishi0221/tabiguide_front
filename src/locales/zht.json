@@ -1,0 +1,30 @@
+{
+  "settings": {
+    "language": {
+      "title": "語言設定",
+      "selectLabel": "選擇語言"
+    }
+  },
+  "bottomBar": {
+    "chat": "聊天",
+    "map": "地圖",
+    "info": "基本資訊",
+    "language": "語言"
+  },
+  "map": {
+    "categories": {
+      "all": "全部",
+      "tour": "觀光",
+      "conveni": "便利商店",
+      "essentials": "日用品",
+      "laundry": "洗衣",
+      "parking": "停車場",
+      "restaurant": "餐廳",
+      "cafe": "咖啡館"
+    },
+    "panel": {
+      "websiteLink": "官方網站",
+      "googleMapLink": "Google 地圖"
+    }
+  }
+}

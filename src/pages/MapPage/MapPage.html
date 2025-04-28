@@ -1,0 +1,65 @@
+<!-- src/pages/MapPage/MapPage.html  ------------------------------- -->
+<div class="map-container relative">
+
+  <!-- ───── カテゴリバー ───── -->
+  <nav
+    class="absolute top-2 left-1/2 -translate-x-1/2 z-20
+           flex gap-0 pointer-events-none
+           bg-white/90 backdrop-blur rounded-lg shadow"
+    style="max-width:calc(100vw - 60px)"
+  >
+    <!-- 全て -->
+    <button
+      class="pointer-events-auto shrink-0 flex flex-col items-center gap-0.5
+             w-20 px-2 py-[8px] font-semibold transition
+             border-r border-neutral-300"
+      :class="active==='all' && 'border-b-[4px] border-neutral-900'"
+      @click="filter('all')"
+    >
+      <span class="material-symbols-outlined text-xl">select_all</span>
+      <span class="text-[11px] leading-none">全て</span>
+    </button>
+
+    <!-- 横スクロール -->
+    <div
+      class="pointer-events-auto flex overflow-x-auto flex-1 space-x-1
+             pl-1 pr-0.5 scrollbar-none snap-x snap-mandatory"
+    >
+      <button
+        v-for="c in categories" :key="c.id"
+        @click="filter(c.id)"
+        class="snap-start shrink-0 flex flex-col items-center gap-0.5
+               w-20 px-2 py-[8px] whitespace-nowrap
+               text-neutral-700 transition hover:bg-white/60"
+        :class="active===c.id && 'font-semibold'"
+        :style="active===c.id && { borderBottom:`4px solid ${c.color}` }"
+      >
+        <span class="material-symbols-outlined text-xl"
+              :style="{ color:c.color }">{{ c.icon }}</span>
+        <span class="text-[11px] leading-none">{{ c.name }}</span>
+      </button>
+    </div>
+
+    <!-- 右側フェード + → -->
+    <div
+      class="pointer-events-none absolute inset-y-0 right-0 w-8
+             bg-gradient-to-l from-white/90 via-white/50 to-transparent
+             flex items-center justify-end pr-1"
+    >
+      <span class="material-symbols-outlined text-base text-neutral-400">
+        chevron_right
+      </span>
+    </div>
+  </nav>
+
+  <!-- ───── 詳細パネル ───── -->
+  <MapPanel
+    v-if="selected"
+    :point="selected"
+    :categories="categories"
+    @close="selected = null"
+  />
+
+  <!-- ───── Google Map ───── -->
+  <div id="map" class="h-screen w-screen"></div>
+</div>
