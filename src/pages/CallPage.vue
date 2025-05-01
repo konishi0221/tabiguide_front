@@ -5,11 +5,11 @@
          @error="handleImageError" />
     <p id='facility_name'>{{ facilityName }}</p>
     <p id='time_count' v-if="timerDisp">{{ time_format(time) }}</p>
-    <p id='time_count' v-if="!timerDisp && active " ><!-- v-if="!timerDisp && active " -->
+    <div id='time_count' v-if="!timerDisp && active " >
       <div id="setting_load" class="typing">
         <span class="dot"></span><span class="dot"></span><span class="dot"></span>
       </div>
-    </p>
+    </div>
 
 
     <button id="call_icon" :class="active ? 'call' : 'close'" @click="toggle">
@@ -47,6 +47,7 @@ const facilityName = computed(() => {
   const b = appInfo.value?.base || {}
   return b.name || b['施設名'] || ''
 })
+
 
 
 

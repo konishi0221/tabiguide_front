@@ -90,7 +90,7 @@ function isActive(name) {
   flex-direction:column;
   align-items:center;
   gap:2px;
-  color: var(--tab-inactive-color);  /* 半透明白 */
+  color: var(--tab-text-color);  /* 半透明白 */
   border-radius:8px;
   transition:background .2s,color .2s;
   text-decoration:none;

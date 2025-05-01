@@ -81,6 +81,7 @@ router.isReady().then(()=>{
         root.style.setProperty('--primary-color', design.primary_color)
         root.style.setProperty('--secondary-color', design.secondary_color)
         root.style.setProperty('--bot-text-color', design.bot_text_color)
+        root.style.setProperty('--tab-text-color', design.tab_text_color)
         root.style.setProperty('--user-text-color', design.user_text_color)
         root.style.setProperty('--tab-active-color', design.tab_active_color)
         root.style.setProperty('--tab-inactive-color', design.tab_inactive_color)
