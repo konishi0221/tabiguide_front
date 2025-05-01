@@ -2,7 +2,11 @@
   <div class="chat-wrap">
 
     <div id="chat_header">
-      <div class="name">{{ facilityName }}</div>
+      <img :src="  `${targetUrl}/upload/${pageUid}/images/header_logo.png`" 
+           class="header-logo"
+           @error="handleHeaderImageError"
+           @load="handleHeaderImageLoad" />
+      <div v-if="showFacilityName" class="name">{{ facilityName }}</div>
     </div>
     <!-- <div id="chat_header_padding"></div> -->
 
@@ -12,7 +16,10 @@
       <div ref="listRef" class="msg-list">
         <template v-for="(m,i) in chat.messages" :key="i">
           <div :class="m.role==='bot' ? 'bot-row' : ''">
-            <img v-if="m.role==='bot'" :src="botIconSrc" class="bot-icon" />
+            <img v-if="m.role==='bot'" 
+              :src="`${targetUrl}/upload/${pageUid}/images/icon.png`" 
+              class="bot-icon"
+              @error="handleImageError" />
             <div
               :class="['bubble', m.role==='bot' ? 'bubble-bot' : 'bubble-user']"
               v-html="nl2br(m.role==='bot' ? botText(m) : m.text)" />
@@ -21,7 +28,9 @@
 
         <!-- ローディング中バブル -->
         <div v-if="chat.loading" class="bot-row">
-          <img :src="botIconSrc" class="bot-icon" />
+          <img :src="`${targetUrl}/upload/${pageUid}/images/icon.png`" 
+               class="bot-icon"
+               @error="handleImageError" />
           <div class="bubble bubble-bot typing">
             <span class="dot"></span><span class="dot"></span><span class="dot"></span>
           </div>
@@ -59,6 +68,8 @@ import { useAppStore }         from '@/stores/info'
 import { storeToRefs }         from 'pinia'
 import { useViewportHeight } from '@/composables/useFooterHeight'
 useViewportHeight()
+const targetUrl   = import.meta.env.VITE_API_BASE        // ↔ API_TARGET
+
 
 /* ─── ストアから施設情報を取得 ─── */
 const appStore = useAppStore()
@@ -80,9 +91,8 @@ const facilityName = computed(() => {
   return b.name || b['施設名'] || ''
 })
 
-
-
-
+/* デザインストアから読み取り */
+const designStore = useDesignStore()
 
 /* ---------- 状態 ---------- */
 const chat      = useChatStore()
@@ -91,14 +101,6 @@ const userId    = localStorage.getItem('chat_user_id') ||
   'anon-' + Math.random().toString(36).slice(2,8)
 localStorage.setItem('chat_user_id', userId)
 const inputRef = ref(null)
-
-/* デザインストアから読み取り */
-const designStore = useDesignStore()
-const botIconSrc  = computed(() => {
-  return designStore.data.logo_base64
-    ? `data:image/png;base64,${designStore.data.logo_base64}`
-    : defaultIcon
-})
 
 watch(inputText, () => nextTick(autoResize))
 
@@ -109,10 +111,6 @@ function autoResize () {
   const max = 120                   // 最大高さ(px) ＝ 約6行
   el.style.height = Math.min(el.scrollHeight , max) + 'px'
 }
-
-
-
-
 
 /* 初期ロード */
 chat.init(pageUid, userId)
@@ -151,79 +149,126 @@ watch(
   },
   { flush: 'post' }
 )
-</script>
 
-<style >
-:root {
-  --fh: 56px;
-  --radius: 18px;
-  --shadow: 0 8px 24px rgba(0,0,0,.18);
-  --gray: #666;
-  --blue: #0066ff;
-  --100vh: 100vh;
-  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+const showFacilityName = ref(true)
+
+function handleHeaderImageError(e) {
+  e.target.style.display = 'none'
+  showFacilityName.value = true
 }
 
+function handleHeaderImageLoad() {
+  showFacilityName.value = false
+}
+
+function handleImageError(e) {
+  e.target.src = defaultIcon
+}
+</script>
+
+<style>
 .chat-wrap {
-  height: calc( 100vh );
+  height: var( --100vh );
   display: flex;
   flex-direction: column;
 }
 
 #chat_header {
-  width:100%;
+  width: 100%;
   position: sticky;
-  top:0;
+  top: 0;
   height: 55px;
-  background:white;
+  background: var(--primary-color);
   z-index: 10;
-  box-sizing:border-box;
+  box-sizing: border-box;
   padding: 10px;
-  vertical-align: middle;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-logo {
+  height: 100%;
+  width: auto;
+  object-fit: contain;
 }
 
 #chat_header .name {
   line-height: 35px;
   height: 35px;
-  display:inline-block;
+  display: inline-block;
   font-weight: bold;
-  vertical-align:middle;
+  vertical-align: middle;
+  color: var(--header-text-color);
 }
+
 #message_wrap {
   flex: 1;
   overflow-y:scroll;
   padding-bottom: calc(60px + var(--fh)); /* input-bar + footerの高さ分の余白 */
 }
+
 .msg-list {
-  display: flex; flex-direction: column; gap: 10px;
+  display: flex; 
+  flex-direction: column; 
+  gap: 10px;
   overflow-y: scroll;
-  padding: 14px 12px 0; box-sizing: border-box;
+  padding: 14px 12px 0; 
+  box-sizing: border-box;
 }
+
 .bubble {
-  clear: both; display: inline-block;
-  max-width: 75%; padding: 8px 12px;
-  border-radius: 10px; font-size: 14px;
-  line-height: 1.6; word-break: break-word;
-  box-shadow: 0 1px 3px rgba(0,0,0,.1);
+  clear: both; 
+  display: inline-block;
+  max-width: 75%; 
+  padding: 8px 12px;
+  border-radius: 10px; 
+  font-size: 14px;
+  line-height: 1.6; 
+  word-break: break-word;
+  box-shadow: 0 1px 3px rgba(0,0,0,.1)
 }
+
 .bubble-user {
-  margin-left: auto; background: #0066ff; color: #fff;
-  border-radius: 10px 0 10px 10px; align-self: flex-end;
+  margin-left: auto; 
+  background: var(--user-message-color);  /* ピンク背景 */
+  color: var(--user-text-color);         /* 白テキスト */
+  border-radius: 10px 0 10px 10px; 
+  align-self: flex-end;
   float: right;
 }
+
 .bubble-bot {
-  align-self: flex-start; background:#6b6b6b;
-  color: #fff;
+  align-self: flex-start; 
+  background: var(--bot-message-color);  /* 茶色背景 */
+  color: var(--bot-text-color);         /* 白テキスト */
   border-top-left-radius: 0;
 }
+
 .bot-row { display: flex; align-items: flex-start; gap: 6px; }
 .bot-icon {
   width: 40px; height: 40px; border-radius: 50%;
-  object-fit: cover; border: solid 1px #dcdcdc;
+  object-fit: cover; 
+  /* border: solid 1px var(--secondary-color); */
+  background: white;
 }
+
+.bot-icon-text {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  line-height: 1.2;
+  text-align: center;
+  word-break: break-all;
+}
+
 .typing { display: flex; gap: 4px; align-items: center; padding: 8px 14px; }
 .dot {
-  width: 6px; height: 6px; border-radius: 50%; background: #bbb;
+  width: 6px; height: 6px; border-radius: 50%; 
+  background: var(--secondary-color);
   animation: blink 1.4s infinite ease-in-out both;
 }
 .dot:nth-child(2) { animation-delay: .2s; }
@@ -232,29 +277,32 @@ watch(
 
 .input-bar {
   position: sticky;
-  bottom: var(--fh); /* footerの高さ分上に配置 */
+  bottom: var(--fh);
   left: 0;
   right: 0;
   display: flex;
   gap: 8px;
-  padding: 10px;
-  padding-bottom: calc(10px + var(--safe-area-inset-bottom));
-  background: #fff;
-  border-top: 1px solid #ddd;
-  box-shadow: 0 -2px 10px rgba(0,0,0,.1);
+  padding: 5px;
+  /* padding-bottom: calc(10px + var(--safe-area-inset-bottom)); */
+  background: var(--input-background-color);
+  border-top: none;
+  box-shadow: none;
   z-index: 10;
+  border-top: solid 1px #dcdcdc;
+  box-sizing: border-box;
 }
 
 .input {
-  width:calc(100% - 50px);
+  width: calc(100% - 50px);
   font-size: 16px;
   padding: 6px 10px;
-  border: 1px solid #ccc;
+  border: none;
   border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,.1) inset;
-  font-size:16px;
-  padding:6px 10px;
-  line-height:1.4;
+  box-shadow: none;
+  background: white;
+  line-height: 25px;
+  border: solid 1px #dcdcdc;
+  box-shadow:  2px 2px 3px rgba(0,0,0,.05) inset;
 }
 
 .send-btn {
@@ -262,7 +310,8 @@ watch(
   width: 45px;
   border: none;
   border-radius: 6px;
-  color: #0066ff;
+  color: var(--send-button-color);  /* 送信ボタンのアイコン色 */
+  background: var(--send-button-bg-color);  /* 送信ボタンの背景色 */
   place-items: center;
   cursor: pointer;
 }
@@ -274,12 +323,5 @@ watch(
 
 .send-btn span {
   font-size: 22px;
-}
-
-/* iPhoneのホームバーがある場合の対応 */
-@supports (padding: max(0px)) {
-  .input-bar {
-    padding-bottom: max(10px, env(safe-area-inset-bottom));
-  }
 }
 </style>

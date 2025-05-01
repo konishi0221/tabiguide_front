@@ -2,12 +2,12 @@
 <template>
   <div class="map-container relative">
     <!-- ①カテゴリバー -->
-    <nav class="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex gap-0
+    <nav id="category_bar" class="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex gap-0
                 bg-white/95 backdrop-blur-md rounded-xl overflow-hidden shadow-lg"
-         style="max-width:calc(100vw - 40px); min-height:52px">
+         style=" max-width:calc(100vw - 40px); min-height:52px">
       <!-- 全て -->
       <button class=" button flex flex-col items-center gap-0.5 w-16 px-1.5 py-2 text-[10px]"
-              :class="active==='all' && 'border-b-[3px] border-neutral-900 font-semibold'"
+              :class="active==='all' && 'active'"
               @click="filter('all')">
         <span class="material-symbols-outlined text-[20px]">select_all</span>{{t('map.categories.all')}}
       </button>
@@ -15,7 +15,7 @@
       <div class="border-l category-bar flex overflow-x-auto flex-1 space-x-0.5 pl-0.5 pr-0 snap-x snap-mandatory">
         <button v-for="c in categories" :key="c.id"
                 class="button snap-start flex flex-col items-center gap-0.5  px-1.5 py-2 text-[10px] transition hover:bg-neutral-50"
-                :class="active===c.id && 'border-b-[3px] border-black font-semibold'"
+                :class="active===c.id && 'active'"
                 @click="filter(c.id)">
           <span class="text material-symbols-outlined text-[20px]">{{ c.icon }}</span>{{ c.name }}
         </button>
@@ -30,7 +30,7 @@
     <MapPanel v-model:point="selected" @close="handlePanelClose"/>
 
     <!-- ③Google Map -->
-    <div id="map" class="h-screen w-screen"></div>
+    <div id="map" class=""></div>
   </div>
 </template>
 
@@ -274,6 +274,10 @@ const imgUrl = computed(() => {
 </script>
 
 <style >
+#map {
+  height: var(--100vh);
+  z-index: 0;
+}
 .adv-pin{
   --c:#007bff;
   width:40px;height:40px;border-radius:50%;
@@ -308,5 +312,14 @@ const imgUrl = computed(() => {
   white-space: nowrap;
   height: 20px;
   width:calc(70px)
+}
+
+#category_bar {
+  position: fixed;
+  top: 20px;
+}
+
+button.active {
+  border-bottom:solid 3px var(--secondary-color);
 }
 </style>

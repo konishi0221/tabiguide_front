@@ -119,8 +119,7 @@
 #map{
   position: absolute;
   inset: 0;
-  top: 55px;                 /* カテゴリバー分だけ下げる */
-  height: calc(100vh - 55px);
+  /* height: calc(100vh - 55px); */
   transition: all .3s ease-out;
 }
 #map.active{
@@ -169,4 +168,3 @@
 }
 
 /* ───────── Map 本体をバー分だけ下げる ───────── */
-#map{ position:absolute; inset:0; top:48px; height:calc(100vh - 48px); }

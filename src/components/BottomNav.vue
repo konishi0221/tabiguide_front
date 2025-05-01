@@ -11,6 +11,16 @@
     </RouterLink>
 
     <RouterLink
+      :to="makeLink('call')"
+      class="tab-btn"
+      :class="{ active: isActive('call') }"
+    >
+      <span class="material-symbols-outlined icon">call</span>
+      <span class="txt">{{ t('bottomBar.map') ?? '電話' }}</span>
+    </RouterLink>
+
+
+    <RouterLink
       :to="makeLink('map')"
       class="tab-btn"
       :class="{ active: isActive('map') }"
@@ -59,44 +69,67 @@ function isActive(name) {
 
 <style>
 #tab-bar{
-  position:fixed;
-  bottom:0; left:0; right:0;
-  height:55px;                      /* = 3rem */
-  background:black;
+  bottom:0; 
+  left:0; 
+  right:0;
+  height:55px;
+  background: var(--secondary-color);  /* 紺色背景 */
   display:flex;
   justify-content:space-around;
   align-items:center;
   font-size:10px;
   z-index:1000;
-  paddiing-bottom:20px;
+  /* padding-bottom:20px; */
+  position:fixed;
 }
+
+
 
 .tab-btn{
   display:flex;
   flex-direction:column;
   align-items:center;
   gap:2px;
-  color: white;
+  color: var(--tab-inactive-color);  /* 半透明白 */
   border-radius:8px;
   transition:background .2s,color .2s;
-  text-decoration:none;          /* RouterLink → <a> */
+  text-decoration:none;
   width:45px;
   height:45px;
+  opacity: 0.5;
+  font-weight: 100;
+  padding-bottom: 20px;
 }
 .tab-btn .icon{
   font-size:25px;
   line-height:30px;
   height: 30px;
   display:block;    /* サイズ制御を確実に */
-  vertical-align: center;
-} /* 20 px = Tailwind text‑lg */
+  font-variation-settings:
+  'FILL' 0,
+  'wght' 100,
+  'GRAD' 0;
+}
+
+/* 20 px = Tailwind text‑lg */
 span.txt{
   font-size:8px;
   line-height: 8px;
-} /* 20 px = Tailwind text‑lg */
+} /* 20 px = Tailwind text‑lg */
 
 .tab-btn.active{
-  background: white;            /* pink‑100 近似 */
-  color:black;                 /* pink‑600 近似 */
+  opacity: 1;
+  font-weight: bold;
+}
+.tab-btn.active span.txt{
+  font-weight: bold;
+}
+.tab-btn.active .icon{
+  font-weight: 700;
+  font-variation-settings:
+  'FILL' 1,
+  'wght' 400,
+  'GRAD' 0,
+  'opsz' 24;
 }
 </style>

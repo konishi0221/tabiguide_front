@@ -3,15 +3,99 @@
 @tailwind utilities;
 
 /* －－－－ここから追加－－－－ */
-
-html {
-  background-color: whitesmoke;
+/* デザイン変数のデフォルト値 */
+:root {
+  /* フォント */
+  --font-family: 'Noto Sans JP', sans-serif;
+  --fh: 55px;
+  --radius: 18px;
+  --shadow: 0 8px 24px rgba(0,0,0,.18);
+  --gray: #666;
+  --blue: #0066ff;
+  --100vh: 100dvh;
 }
 
+
+html {
+  font-family: "Avenir Next", Verdana, "ヒラギノ角ゴ Pro W3", "Hiragino Kaku Gothic Pro", "游ゴシック", "Yu Gothic", "メイリオ", Meiryo, Osaka, sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: white;
+}
+
+#app {
+  background: var(--bg-filter-color);
+  backdrop-filter: blur(var(--bg-filter-blur));
+  height:var(--100vh);
+  overflow: hidden;
+}
+@supports (-webkit-touch-callout: none) {
+  #app {
+    height: -webkit-fill-available;
+  }
+}
 .material-symbols-outlined.filled {
   font-variation-settings:
   'FILL' 1,
   'wght' 400,
   'GRAD' 0,
   'opsz' 24;
+}
+
+
+
+/* ベーススタイル */
+body {
+  font-family: var(--font-family);
+}
+
+/* チャットメッセージ */
+.bot-message {
+  background-color: var(--bot-message-color);
+  color: var(--bot-text-color);
+}
+
+.user-message {
+  background-color: var(--user-message-color);
+  color: var(--user-text-color);
+}
+
+/* ヘッダー */
+.header {
+  color: var(--header-text-color);
+}
+
+/* タブ */
+.tab-active {
+  color: var(--tab-active-color);
+}
+
+.tab-inactive {
+  color: var(--tab-inactive-color);
+}
+
+/* 送信ボタン */
+.send-button {
+  color: var(--send-button-color);
+  background-color: var(--send-button-bg-color);
+}
+
+/* 入力欄 */
+.input-field {
+  background-color: var(--input-background-color);
+}
+
+@media (display-mode: standalone) {
+  #tab-bar {
+    height:75px;
+  }
+  .tab-btn {
+    height: 65px;
+  }
+  :root {
+    --fh: 75px;
+  }
 }

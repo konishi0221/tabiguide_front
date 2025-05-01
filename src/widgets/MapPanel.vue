@@ -63,6 +63,7 @@ import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 import { useViewportHeight } from '@/composables/useFooterHeight'
 useViewportHeight()
+const targetUrl   = import.meta.env.VITE_API_BASE        // ↔ API_TARGET
 
 const props = defineProps({
   point: Object,
@@ -76,11 +77,12 @@ const { point } = toRefs(props)
 const state = ref('hidden')
 const panel = ref(null)
 
+
 // サムネイルURL
 const imgUrl = computed(() => {
   const p = props.point
   if (!p?.facility_uid || !p?.uid) return ''
-  return `/upload/${p.facility_uid}/stores/${p.uid}.jpg`
+  return `${targetUrl}/upload/${p.facility_uid}/stores/${p.uid}.jpg`
 })
 
 // 存在チェック - 一時的に常にtrueを返す
@@ -165,14 +167,7 @@ function handleUp(e) {
 </script>
 
 <style>
-:root {
-  --fh: 56px;
-  --radius: 18px;
-  --shadow: 0 8px 24px rgba(0,0,0,.18);
-  --gray: #666;
-  --blue: #0066ff;
-  --100vh: 100vh;
-}
+
 .mp {
   position: fixed; left: 0; right: 0;
   bottom: calc(50vh * -1);
@@ -193,7 +188,7 @@ function handleUp(e) {
 }
 .hdr {
   display: flex; align-items: center; gap: .85rem;
-  padding: 10px 10px 0; cursor: grab;
+  padding: 20px 10px 10px; cursor: grab;
   border-bottom: 1px solid #dcdcdc;
   position: relative;
 }

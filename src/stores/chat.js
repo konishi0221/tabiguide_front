@@ -31,7 +31,7 @@ export const useChatStore = defineStore('chat', {
 
   actions: {
     /* ---------- 初期化 ---------- */
-    async init (pageUid){
+    async  init (pageUid){
       const key = CTX_KEY(pageUid)
       const savedCtx = JSON.parse(localStorage.getItem(key) || 'null')
 
@@ -65,6 +65,13 @@ export const useChatStore = defineStore('chat', {
             viaTool: false
           }]
         }
+
+        return {
+          role: 'bot',
+          text: this.firstGreeting,
+          viaTool: false
+        }
+  
       }catch(e){
         this.firstGreeting = 'こんにちは！ご質問があればどうぞ！'
         this.messages = [{
@@ -81,8 +88,8 @@ export const useChatStore = defineStore('chat', {
     async send (pageUid, userId, text){
       const toast = useToast()
 
-      console.group('Chat Message Send')
-      console.log('Request:', { pageUid, userId, text })
+      // console.group('Chat Message Send')
+      // console.log('Request:', { pageUid, userId, text })
 
       // メッセージを追加（最大40件を維持）
       this.messages.push({ role:'user', text, viaTool:false })
@@ -98,13 +105,13 @@ export const useChatStore = defineStore('chat', {
           messages: this.messages
         }
 
-        console.group('API Call')
-        console.log('Context:', this.ctx)
-        console.log('Messages:', this.messages)
-        console.log('Full context with history:', contextWithHistory)
+        // console.group('API Call')
+        // console.log('Context:', this.ctx)
+        // console.log('Messages:', this.messages)
+        // console.log('Full context with history:', contextWithHistory)
 
         const data = await sendMessage(pageUid, userId, text, contextWithHistory)
-        console.log(data)
+        // console.log(data)
         console.groupEnd()
 
         // すべてのctx更新をまとめて処理
@@ -125,18 +132,20 @@ export const useChatStore = defineStore('chat', {
                     }
                 }
             })
-            console.groupEnd()
+            // console.groupEnd()
 
             // まとめた更新を一度に適用
             if (Object.keys(ctxUpdates).length > 0) {
-                console.log('Applying context updates:', ctxUpdates)
-                this.updateCtx(pageUid, ctxUpdates)
+                // console.log('Applying context updates:', ctxUpdates)
+                // this.updateCtx(pageUid, ctxUpdates)
               }
           }
 
         if (data.staff_called) {
             toast.success('スタッフに連絡しました！')
         }
+
+        
 
         // ボットの応答を追加（最大40件を維持）
         this.messages.push({
@@ -149,6 +158,9 @@ export const useChatStore = defineStore('chat', {
           this.messages = this.messages.slice(-40)
         }
 
+        return data
+
+
       }catch(err){
         console.group('Error')
         console.error('Error details:', err)
@@ -160,6 +172,7 @@ export const useChatStore = defineStore('chat', {
         this.loading = false
         console.groupEnd()
       }
+
     },
 
     /* ---------- ctx を更新 ---------- */

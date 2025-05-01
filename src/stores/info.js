@@ -10,8 +10,11 @@ export const useAppStore = defineStore('app', {
     loading: false
   }),
   getters: {
-    facilityName: (state) => state.appInfo.base?.name ?? '取得中'
-  },
+    facilityName: (state) => {
+      console.log('getter facilityName:', state.appInfo.base)
+      return state.appInfo.base?.name ?? '取得中'
+    }
+    },
   actions: {
     async getInfo() {
       // ページ UID と言語をストア内で取得
