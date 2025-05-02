@@ -18,6 +18,7 @@
         {{ active ? 'close' : 'call' }}
       </span>
     </button>
+    <div id="call_text">{{ t('call.callLabel') }}</div>
   </div>
 </template>
 
@@ -29,6 +30,8 @@ import { useRoute } from 'vue-router'
 import defaultIcon from '@/assets/images/default_icon.png'
 import { useAppStore } from '@/stores/info'
 import axios from 'axios'
+import { useI18n } from 'vue-i18n'   // 追加
+const { t } = useI18n()              // 追加
 
 const targetUrl = import.meta.env.VITE_API_BASE
 const GOOGLE_TTS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY
@@ -226,14 +229,13 @@ async function speakByGoogle(text) {
 }
 
 #call_icon {
-
   display: block;
   border-radius: 500px;
   width: calc(70px);
   height: 70px;
   background: var(--primary-color);
   position: fixed;
-  bottom: 130px;
+  bottom: 150px;
   left: 50%;
   transform: translateX(-50%);
   -webkit-transform: translateX(-50%);
@@ -244,11 +246,18 @@ async function speakByGoogle(text) {
     'FILL' 1,   /* 塗りつぶし */
     'GRAD' 0,
     'opsz' 48;
+
+  color: var(--tab-text-color);
 }
 
-#call_icon {
-  color: var(--header-text-color);
+#call_text {
+  bottom: 120px;
+  display: block;
+  position: fixed;
+  text-align: center;
+  width: calc(100%);
 }
+
 
 #time_count {
   text-align: center;

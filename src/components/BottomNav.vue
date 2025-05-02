@@ -15,8 +15,8 @@
       class="tab-btn"
       :class="{ active: isActive('call') }"
     >
-      <span class="material-symbols-outlined icon">call</span>
-      <span class="txt">{{ t('bottomBar.map') ?? '電話' }}</span>
+      <span class="material-symbols-outlined icon">support_agent</span>
+      <span class="txt">{{ t('bottomBar.call') }}</span>
     </RouterLink>
 
 

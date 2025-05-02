@@ -8,8 +8,15 @@
   "bottomBar": {
     "chat": "チャット",
     "map": "周辺マップ",
+    "call": "音声通話",
     "info": "基本情報",
     "language": "翻訳"
+  },
+  "call": {
+    "callLabel":"音声通話"
+  },
+  "chat": {
+    "placeholder":"メッセージを入力..."
   },
   "map": {
     "categories": {

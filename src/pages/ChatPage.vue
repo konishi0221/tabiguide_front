@@ -45,7 +45,7 @@
         ref="inputRef"
         v-model="inputText"
         class="input"
-        placeholder="メッセージを入力"
+        :placeholder="t('chat.placeholder')"
         rows="1"
         style="overflow:hidden;resize:none;"
         @keydown.meta.enter.prevent="submit"
@@ -67,6 +67,9 @@ import defaultIcon             from '@/assets/images/default_icon.png'
 import { useAppStore }         from '@/stores/info'
 import { storeToRefs }         from 'pinia'
 import { useViewportHeight } from '@/composables/useFooterHeight'
+import { useI18n } from 'vue-i18n'   // 追加
+const { t } = useI18n()              // 追加
+
 useViewportHeight()
 const targetUrl   = import.meta.env.VITE_API_BASE        // ↔ API_TARGET
 
@@ -306,7 +309,7 @@ function handleImageError(e) {
 }
 
 .send-btn {
-  height: 34px;
+  height: 40px;
   width: 45px;
   border: none;
   border-radius: 6px;

@@ -104,13 +104,6 @@ router.isReady().then(()=>{
         root.style.setProperty('--bg-filter-color', design.bg_filter_color)
         root.style.setProperty('--bg-filter-opacity', design.bg_filter_opacity)
 
-        // 設定後のCSS変数の値を確認
-        console.log('Applied CSS variables:', {  // デバッグ出力
-          primaryColor: getComputedStyle(root).getPropertyValue('--primary-color'),
-          botMessageColor: getComputedStyle(root).getPropertyValue('--bot-message-color'),
-          userMessageColor: getComputedStyle(root).getPropertyValue('--user-message-color'),
-        })
-
       }
     }
   }

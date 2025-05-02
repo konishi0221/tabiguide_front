@@ -1,0 +1,10 @@
+postalAddress:
+  regionCode: JP
+  postalCode: "153-0051"
+  administrativeArea: Tokyo
+  locality: Meguro-ku
+  addressLines: ["2-30-4 Kamimeguro"]
+  recipients: ["Yuki Konishi"]
+  organization: ""
+email: you@example.com
+phoneNumber: "+81-80-5027-9206"
