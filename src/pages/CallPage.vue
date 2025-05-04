@@ -1,16 +1,18 @@
+<!-- src/pages/CallPage.vue -->
 <template>
+
   <div id="call">
-    <img :src="`${targetUrl}/upload/${pageUid}/images/icon.png`" 
+    <img :src="`${targetUrl}/upload/${pageUid}/images/icon.png`"
          id="facility_icon"
          @error="handleImageError" />
-    <p id='facility_name'>{{ facilityName }}</p>
-    <p id='time_count' v-if="timerDisp">{{ time_format(time) }}</p>
-    <div id='time_count' v-if="!timerDisp && active " >
+    <p id="facility_name">{{ facilityName }}</p>
+
+    <p id="time_count" v-if="timerDisp">{{ time_format(time) }}</p>
+    <div id="time_count" v-else-if="active">
       <div id="setting_load" class="typing">
         <span class="dot"></span><span class="dot"></span><span class="dot"></span>
       </div>
     </div>
-
 
     <button id="call_icon" :class="active ? 'call' : 'close'" @click="toggle">
       <audio ref="audioPlayer" />
@@ -18,191 +20,95 @@
         {{ active ? 'close' : 'call' }}
       </span>
     </button>
+
     <div id="call_text">{{ t('call.callLabel') }}</div>
+    <div v-if="debugLogs.length" id="mic_debug">
+  <div v-for="(l,i) in debugLogs" :key="i">{{ l }}</div>
+</div>
   </div>
 </template>
-
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useChatStore } from '@/stores/chat'
-import { useRoute } from 'vue-router'
-import defaultIcon from '@/assets/images/default_icon.png'
-import { useAppStore } from '@/stores/info'
-import axios from 'axios'
-import { useI18n } from 'vue-i18n'   // 追加
-const { t } = useI18n()              // 追加
+import { ref, computed, onMounted, onBeforeUnmount ,watch } from 'vue'
+import { storeToRefs }   from 'pinia'
+import { useChatStore }  from '@/stores/chat'
+import { useAppStore }   from '@/stores/info'
+import { useRoute }      from 'vue-router'
+import { useI18n }       from 'vue-i18n'
+import defaultIcon       from '@/assets/images/default_icon.png'
+import { createCall }    from '@/lib/call.js'
+import { getOption }     from '@/lib/callOption.js'
 
+const phase = ref('idle')   // ← 追加
+
+
+const timerDisp = ref(false)   // 今は使わなくてもダミーで用意
+const time      = ref(0)
+const debugLogs = ref([])      // デバッグ表示用
+
+/* ---------- const ---------- */
+const { t }     = useI18n()
+const route     = useRoute()
+const pageUid   = route.params.pageUid || route.query.pageUid || ''
 const targetUrl = import.meta.env.VITE_API_BASE
-const GOOGLE_TTS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY
+const TTS_KEY   = import.meta.env.VITE_GOOGLE_MAPS_KEY
 
+/* ---------- stores ---------- */
 const chat = useChatStore()
-const route = useRoute()
-const pageUid = route.params.pageUid || route.query.pageUid || ''
-const userId = chat.ctx.chatId
-const userLang = localStorage.getItem('lang')
+const { appInfo } = storeToRefs(useAppStore())
 
-
-const appStore = useAppStore()
-const { appInfo } = storeToRefs(appStore)
+/* ---------- state ---------- */
 const facilityName = computed(() => {
-  // JSON のキーが base.name か base['施設名'] どちらかに合わせてください
   const b = appInfo.value?.base || {}
   return b.name || b['施設名'] || ''
 })
+const active     = ref(false)
+const callState  = ref('idle')
 
-
-
-
-const time = ref('')
-const timer = ref(null)
-const timerDisp = ref(false)
-
-
-
-function time_format(sec) {
-  const h = Math.floor(sec / 3600)
-  const m = Math.floor((sec % 3600) / 60)
-  const s = sec % 60
-
-  const pad = n => n.toString().padStart(2, '0')
-
-  return h > 0
-    ? `${h}:${pad(m)}:${pad(s)}`
-    : `${pad(m)}:${pad(s)}`
-}
-
-
-const active = ref(false)
-let recog = null
-let unlocked = false
-const pendingReplies = []
-const voiceText = ref('')
+/* ---------- refs ---------- */
 const audioPlayer = ref(null)
-const lang = ref('ja-JP')
-const botChara = ref('')
 
-function langToSpeech(lang) {
-  const map = { ja: 'ja-JP', en: 'en-US', ko: 'ko-KR', zh: 'zh-CN', zht: 'zh-TW', th: 'th-TH', vi: 'vi-VN', id: 'id-ID', es: 'es-ES' }
-  return map[lang] || 'ja-JP'
-}
+/* ---------- helpers ---------- */
+function handleImageError (e) { e.target.src = defaultIcon }
 
-function langToSpeechVoice(lang) {
-  const voiceMap = {
-    'ja-JP': 'ja-JP-Wavenet-A',
-    'en-US': 'en-US-Wavenet-A',
-    'ko-KR': 'ko-KR-Wavenet-A',
-    'zh-CN': 'cmn-CN-Wavenet-A',
-    'zh-TW': 'cmn-TW-Wavenet-A',
-    'th-TH': 'th-TH-Wavenet-A',
-    'vi-VN': 'vi-VN-Wavenet-A',
-    'id-ID': 'id-ID-Wavenet-A',
-    'es-ES': 'es-ES-Wavenet-D',
-  }  
-  return voiceMap[lang] || 'en-US-Wavenet-A'
-}
-
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
-
-onMounted(async () => {
-  const init = await chat.init(pageUid)
-  voiceText.value = init.text
-  lang.value = langToSpeech(userLang)
-  botChara.value = langToSpeechVoice(lang.value)
-  await useAppStore().getInfo()
-})
-
-function unlockGesture() {
-  if (unlocked) return
-  unlocked = true
-  audioCtx.resume().catch(()=>{})
-  while(pendingReplies.length) speakByGoogle(pendingReplies.shift())
-}
-
-function timer_start() {
-  console.log('スタート')
-  timerDisp.value = true
-  timer.value = setInterval(() => { time.value++ }, 1000)
-}
-
-function timer_end() {
-  clearInterval(timer.value)
-  timerDisp.value = false
-  timer.value = null
-  time.value = ""
-  console.log('終わり')
-}
-
-function startRec() {
-  speakByGoogle(voiceText.value)
-  const API = window.SpeechRecognition || window.webkitSpeechRecognition
-  if (!API) return console.warn('Web Speech API not supported')
-  
-  recog = new API()
-  recog.continuous = true
-  recog.lang = lang.value
-  recog.onresult = async ({ results }) => {
-    if (audioPlayer.value && !audioPlayer.value.paused) {
-      audioPlayer.value.pause()  
-      audioPlayer.value.currentTime = 0
-    }
-
-    const last = results[results.length - 1]
-    if (!last.isFinal) return
-    const txt = last[0].transcript.trim()
-    if (!txt) return
-    const res = await chat.send(pageUid, userId, txt)
-    const reply = res?.message || res
-    unlocked ? speakByGoogle(reply) : pendingReplies.push(reply)
-  }
-  recog.start()
-}
-
-function handleImageError(e) {
-  e.target.src = defaultIcon
-}
-
-function stopRec() {
-  recog?.stop()
-  recog = null
-  audioPlayer.value.pause()
-  audioPlayer.value.currentTime = 0
-  timer_end()
-}
-
-function toggle() {
-  unlockGesture()
-  active.value ? stopRec() : startRec()
+/* ---------- call ---------- */
+let call = null
+function toggle () {
+  if (!call) return
+  active.value ? call.stop() : call.start()
   active.value = !active.value
 }
 
-async function speakByGoogle(text) {
-  const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_KEY}`
-  const body = {
-    input: { text: text.slice(0, 5000) },
-    voice: { languageCode: lang.value, name: botChara.value },
-    audioConfig: { audioEncoding: 'MP3', speakingRate: 1.2 }
-  }
 
-  console.log(langToSpeechVoice(lang.value))
 
-  try {
-    const { data } = await axios.post(url, body)
+/* ---------- lifecycle ---------- */
+onMounted(async () => {
+  await chat.init(pageUid)
+  await useAppStore().getInfo()
 
-    if (timerDisp.value == false ) {
-      timer_start()
-    }
+  /* opts は chat.init 後に生成 */
+  const opts = getOption({
+    lang  : chat.lang,
+    greet : chat.messages[0]?.text || '',
+    debug : import.meta.env.DEV
+  })
 
-    if (!data.audioContent) return console.error('[TTS] missing audioContent', data)
-    if (audioPlayer.value && active.value) {
-      audioPlayer.value.src = `data:audio/mp3;base64,${data.audioContent}`
-      await audioPlayer.value.play()
-    }
-  } catch (err) {
-    console.error('[TTS] axios error', err)
-  }
-}
+  call = createCall({
+    pageUid,
+    chatStore   : chat,
+    audioElement: audioPlayer.value,
+    ttsKey      : TTS_KEY,
+    ...opts
+  })
+  phase.value = call.phase.value          // 初期値
+  watch(call.phase, v => phase.value = v) // 反映
+
+
+  // call.on((ev) => { if (ev === 'state') callState.value = ev })
+})
+
+onBeforeUnmount(() => { call?.stop() })
 </script>
+
 
 <style >
 

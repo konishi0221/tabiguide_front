@@ -8,8 +8,15 @@
   "bottomBar": {
     "chat": "Trò chuyện",
     "map": "Bản đồ",
+    "call": "Gọi",
     "info": "Thông tin",
     "language": "Ngôn ngữ"
+  },
+  "call": {
+    "callLabel": "Cuộc gọi thoại"
+  },
+  "chat": {
+    "placeholder": "Nhập tin nhắn..."
   },
   "map": {
     "categories": {

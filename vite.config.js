@@ -1,4 +1,5 @@
 // vite.config.cjs
+
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
@@ -19,7 +20,7 @@ export default defineConfig(({ command, mode }) => {
   ? 'wss://tabiguide-speech-364524278619.asia-northeast1.run.app'    // PWA 本番
   : 'ws://localhost:4000'
 
-
+  
   
       
   return {

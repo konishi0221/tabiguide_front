@@ -8,8 +8,15 @@
   "bottomBar": {
     "chat": "แชท",
     "map": "แผนที่",
+    "call": "โทร",
     "info": "ข้อมูล",
     "language": "ภาษา"
+  },
+  "call": {
+    "callLabel": "โทรด้วยเสียง"
+  },
+  "chat": {
+    "placeholder": "พิมพ์ข้อความ..."
   },
   "map": {
     "categories": {

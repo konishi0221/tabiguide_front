@@ -8,8 +8,15 @@
   "bottomBar": {
     "chat": "Chat",
     "map": "Map",
+    "call": "Call",
     "info": "Info",
     "language": "Language"
+  },
+  "call": {
+    "callLabel": "Voice Call"
+  },
+  "chat": {
+    "placeholder": "Type a message..."
   },
   "map": {
     "categories": {

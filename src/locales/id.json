@@ -8,8 +8,15 @@
   "bottomBar": {
     "chat": "Obrolan",
     "map": "Peta",
+    "call": "Panggil",
     "info": "Info",
     "language": "Bahasa"
+  },
+  "call": {
+    "callLabel": "Panggilan Suara"
+  },
+  "chat": {
+    "placeholder": "Ketik pesan..."
   },
   "map": {
     "categories": {

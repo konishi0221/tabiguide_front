@@ -8,8 +8,15 @@
   "bottomBar": {
     "chat": "채팅",
     "map": "지도",
+    "call": "통화",
     "info": "정보",
     "language": "언어"
+  },
+  "call": {
+    "callLabel": "음성 통화"
+  },
+  "chat": {
+    "placeholder": "메시지를 입력..."
   },
   "map": {
     "categories": {

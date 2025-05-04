@@ -7,6 +7,13 @@
            @error="handleHeaderImageError"
            @load="handleHeaderImageLoad" />
       <div v-if="showFacilityName" class="name">{{ facilityName }}</div>
+
+      <router-link
+      :to="{ name:'call', params:{ pageUid } }"
+      class="call-link"
+      aria-label="call">
+        <span class="material-symbols-outlined phone">call</span>
+      </router-link>
     </div>
     <!-- <div id="chat_header_padding"></div> -->
 
@@ -116,7 +123,7 @@ function autoResize () {
 }
 
 /* 初期ロード */
-chat.init(pageUid, userId)
+chat.init(pageUid)
 
 /* helper */
 function nl2br(txt = '') {
@@ -326,5 +333,17 @@ function handleImageError(e) {
 
 .send-btn span {
   font-size: 22px;
+}
+
+.call-link {                /* 電話ボタン */
+  margin-left:auto;         /* 右端寄せ */
+  display:flex; align-items:center;
+  padding:4px; border-radius:6px;
+}
+
+.phone {
+  font-size:28px;
+  font-variation-settings:'FILL' 1,'GRAD' 0,'opsz' 48;
+  color:var(--header-text-color);
 }
 </style>

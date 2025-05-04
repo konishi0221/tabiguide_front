@@ -8,8 +8,15 @@
   "bottomBar": {
     "chat": "聊天",
     "map": "地图",
+    "call": "通话",
     "info": "基本信息",
     "language": "语言"
+  },
+  "call": {
+    "callLabel": "语音通话"
+  },
+  "chat": {
+    "placeholder": "输入消息..."
   },
   "map": {
     "categories": {
