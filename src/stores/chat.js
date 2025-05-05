@@ -13,6 +13,7 @@ export const useChatStore = defineStore('chat', {
     loading  : false,
     lang     : 'ja',
     chatId   : '',
+    mode     : 'chat',                   // ← 追加: 画面側で切替
     userId   : localStorage.getItem('chat_user_id') ||
                'anon-' + Math.random().toString(36).slice(2,8)
   }),
@@ -37,9 +38,16 @@ export const useChatStore = defineStore('chat', {
         }))
 
         if (!this.messages.length){
-          const dsg = await fetchChatSetting(pageUid, this.lang)
-          const greeting = dsg.chat_first_message || 'こんにちは！ご質問があればどうぞ！'
-          this.messages.push({ role:'bot', text:greeting, viaTool:false })
+
+        const dsg = await fetchChatSetting(pageUid, this.lang)
+    // モードによって最初のメッセージを切り替え
+         const greeting = this.mode === 'voice'
+        ? (dsg.voice_first_message || dsg.chat_first_message)
+        : (dsg.chat_first_message || dsg.voice_first_message)
+        || 'こんにちは！ご質問があればどうぞ！'
+
+
+        this.messages.push({ role:'bot', text:greeting, viaTool:false })
         }
       }catch{
         this.messages = [{
@@ -55,21 +63,27 @@ export const useChatStore = defineStore('chat', {
       localStorage.setItem(LANG_KEY(pageUid), lang)
       localStorage.setItem('lang', lang)      // detectLang() と同期
     },
+    setMode (mode){          // 'chat' | 'voice'
+      this.mode = mode
+    },
+    
 
     async send (pageUid, userId, text){
       const toast = useToast()
 
       this.messages.push({ role:'user', text, viaTool:false })
       if (this.messages.length > 40) this.messages = this.messages.slice(-40)
+      // console.log(this.mode)
 
       this.loading = true
       try{
         const data = await sendMessage(pageUid, userId, text, {
           lang     : this.lang,
           chatId   : this.chatId,
-          messages : this.messages
+          mode     : this.mode
         })
-        console.log(data)
+
+        console.log(data.ctx)
 
         if (data.staff_called) toast.success('スタッフに連絡しました！')
 

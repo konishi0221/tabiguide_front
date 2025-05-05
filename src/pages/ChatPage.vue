@@ -77,6 +77,7 @@ import { useViewportHeight } from '@/composables/useFooterHeight'
 import { useI18n } from 'vue-i18n'   // 追加
 const { t } = useI18n()              // 追加
 
+
 useViewportHeight()
 const targetUrl   = import.meta.env.VITE_API_BASE        // ↔ API_TARGET
 
@@ -106,6 +107,7 @@ const designStore = useDesignStore()
 
 /* ---------- 状態 ---------- */
 const chat      = useChatStore()
+chat.setMode('chat')
 const inputText = ref('')
 const userId    = localStorage.getItem('chat_user_id') || 
   'anon-' + Math.random().toString(36).slice(2,8)

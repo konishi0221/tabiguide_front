@@ -25,6 +25,7 @@ export function createCall ({
   const phase = ref('idle')
   let   active = false
   let   recog  = null               // PC 用 SpeechRecognition
+  let   micStream  = null;
 
   /* ---- Google TTS ---- */
   async function speak (text) {
@@ -50,18 +51,39 @@ export function createCall ({
   /* ---- Whisper STT (iOS / 強制) ---- */
   async function listenIOS () {
     const blob = await recordUntilSilence(silenceGap)
-    if (blob.size < 8000) return ''              // 無音なら送らない
+  
+    if (blob.size < 15000) return ''  // 無音なら送らない
+  
     const fd = new FormData()
     fd.append('model', 'whisper-1')
     fd.append('file', new File([blob], 'audio.webm', { type:'audio/webm' }))
     fd.append('language', lang.slice(0,2))
+  
     const { data } = await axios.post(
       'https://api.openai.com/v1/audio/transcriptions',
-      fd, { headers:{ Authorization:`Bearer ${OPENAI_KEY}` } }
+      fd,
+      { headers:{ Authorization:`Bearer ${OPENAI_KEY}` } }
     )
-    const txt = (data.text || '').trim()
-    txt === lastSpokenText ? '' : txt
-    console.log('IOS :' + txt)
+  
+    let txt = (data.text || '').trim()
+  
+    // ── ノイズ判定（無音時に出てくる不要フレーズを完全に除去） ──
+    const noise = [
+      'by H.',
+      'ご視聴ありがとうございました。'
+    ]
+    // フレーズ単体で全文が一致する場合も含め、部分一致したら無視
+    if (noise.some(n => txt.includes(n))) {
+      // console.log('[listenIOS] ノイズ検出:', txt)
+      return ''
+    }
+  
+    // 前回と同じなら無視
+    if (txt === lastSpokenText) {
+      return ''
+    }
+  
+    // console.log('IOS :', txt)
     return txt
   }
 
@@ -78,7 +100,7 @@ export function createCall ({
       recog.onresult = e => {
         const txt = e.results[0][0].transcript.trim()
         phase.value = 'idle'
-        console.log('WEB :' + txt)
+        // console.log('WEB :' + txt)
         res(txt === lastSpokenText ? '' : txt)
       }
       const end = () => { phase.value = 'idle'; res('') }
@@ -95,7 +117,10 @@ export function createCall ({
   /* ---- 無音で切る録音 ---- */
   function recordUntilSilence (gap) {
     return new Promise(async resolve => {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio:true })
+      // const stream = await navigator.mediaDevices.getUserMedia({ audio:true })
+      micStream = await navigator.mediaDevices.getUserMedia({ audio:true })
+      const stream = micStream
+
       const ctx  = new AudioContext()
       const src  = ctx.createMediaStreamSource(stream)
       const ana  = ctx.createAnalyser()
@@ -111,7 +136,18 @@ export function createCall ({
         silent = vol < levelThresh ? silent+50 : 0
         if (silent >= gap*1000){ clearInterval(iv); rec.stop() }
       },50)
-      rec.onstop = () => resolve(new Blob(chunks,{ type:'audio/webm' }))
+      // rec.onstop = () => resolve(new Blob(chunks,{ type:'audio/webm' }))
+      rec.onstop = () => {
+        // 録音終了時にマイクを解放
+        if (micStream) {
+          micStream.getTracks().forEach(t => t.stop());
+          micStream = null;
+        }
+        // 収集したチャンクから Blob を生成して返す
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        resolve(blob);
+      };
+
     })
   }
 
@@ -135,7 +171,11 @@ export function createCall ({
   async function start () {
     if (active) return
     active = true
-    try { await navigator.mediaDevices.getUserMedia({ audio:true }) }
+    try { 
+      const permStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      permStream.getTracks().forEach(t => t.stop());  
+      // await navigator.mediaDevices.getUserMedia({ audio:true }) 
+    }
     catch { stop(); return }
     if (greet) await speak(greet)
     loop()
@@ -143,6 +183,10 @@ export function createCall ({
   function stop () {
     active = false
     recog?.abort()
+    if (micStream) {
+        micStream.getTracks().forEach(t => t.stop())
+        micStream = null
+    }
     audioElement.pause(); audioElement.currentTime = 0
     phase.value = 'idle'
   }

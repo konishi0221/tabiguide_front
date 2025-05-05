@@ -40,21 +40,17 @@ export async function fetchHistory (pageUid, userId) {
 }
 
 /* ユーザーのメッセージを送り、Bot の応答を受け取る */
-export async function sendMessage (pageUid, chatId, text, ctx) {
+export async function sendMessage (pageUid, chatId, text, datas) {
   /* await は async 関数内なので有効になる */
   const res = await api.post( apiUrl + '/api/chat.php', {
     pageUid,
     userId      : chatId,
     message     : text,
-    lang        : ctx.lang,
-    stage       : ctx.stage,
-    name        : ctx.name,
-    bookingName : ctx.bookingName,
-    room_name   : ctx.room_name,      
-    charactor   : ctx.charactor,
-    mode        : 'chat',
-    messages    : ctx.messages  // 会話履歴を追加
-  })
+    lang        : datas.lang,
+    mode        : datas.mode,
+  },
+  { withCredentials: true }   // ← これを追加
+)
 
   /* axios の data 部だけ返す */
   return res.data;

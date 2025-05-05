@@ -54,6 +54,9 @@ const TTS_KEY   = import.meta.env.VITE_GOOGLE_MAPS_KEY
 
 /* ---------- stores ---------- */
 const chat = useChatStore()
+
+chat.setMode('voice')
+
 const { appInfo } = storeToRefs(useAppStore())
 
 /* ---------- state ---------- */
