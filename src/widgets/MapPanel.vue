@@ -58,12 +58,11 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, nextTick, toRefs } from 'vue'
+import { ref, computed, watch, onMounted, nextTick, toRefs, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 import { useViewportHeight } from '@/composables/useFooterHeight'
 useViewportHeight()
-const targetUrl   = import.meta.env.VITE_API_BASE        // ↔ API_TARGET
 
 const props = defineProps({
   point: Object,
@@ -77,16 +76,32 @@ const { point } = toRefs(props)
 const state = ref('hidden')
 const panel = ref(null)
 
-
 // サムネイルURL
 const imgUrl = computed(() => {
   const p = props.point
   if (!p?.facility_uid || !p?.uid) return ''
-  return `${targetUrl}/upload/${p.facility_uid}/stores/${p.uid}.jpg`
+  // Construct correct GCS URL with bucket path and timestamp for cache busting
+  const bucketPath = 'tabiguide_uploads'
+  const timestamp = Date.now()
+  const url = `${import.meta.env.VITE_GCS_BASE}${bucketPath}/stores/${p.facility_uid}/${p.uid}.png?t=${timestamp}`
+  return url
 })
 
-// 存在チェック - 一時的に常にtrueを返す
-const imgExists = ref(true)
+// 存在チェック - 画像ロードで真偽を判定
+const imgExists = ref(false)
+
+// 存在チェック - 画像ロードで真偽を判定
+watchEffect(() => {
+  const url = imgUrl.value
+  if (url) {
+    const tester = new Image()
+    tester.onload = () => { imgExists.value = true }
+    tester.onerror = () => { imgExists.value = false }
+    tester.src = url
+  } else {
+    imgExists.value = false
+  }
+})
 
 // 半分/全画面切り替え
 watch(

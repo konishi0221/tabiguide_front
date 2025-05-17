@@ -15,25 +15,23 @@ import 'vue-toastification/dist/index.css'
 import './style.css'
 const targetUrl   = import.meta.env.VITE_API_BASE        // ↔ API_TARGET
 
+// Google Cloud Storage
+const GCS_BASE   = 'https://storage.googleapis.com/'
+const GCS_BUCKET = 'tabiguide_uploads'
+
 /* ───────────── axios baseURL ───────────── */
 axios.defaults.baseURL = import.meta.env.PROD
   ? import.meta.env.VITE_API_BASE        // 本番
   : 'http://localhost:8080'              // ローカル
 
-
-
-/* ───────────── ctx & i18n ───────────── */
-const CTX_KEY = 'tg_ctx_GLOBAL'
-let ctx = {}
-try { ctx = JSON.parse(localStorage.getItem(CTX_KEY) || '{}') } catch {}
-ctx.lang = detectLang()
-localStorage.setItem(CTX_KEY, JSON.stringify(ctx))
+// Default language based on browser
+const defaultLang = detectLang()
 
 const localeFiles = import.meta.glob('./locales/*.json',{ eager:true })
 const messages = Object.fromEntries(
   Object.entries(localeFiles).map(([p,m])=>[p.match(/([a-z]{2})\.json$/)[1],m.default])
 )
-const i18n = createI18n({ legacy:false, locale:ctx.lang, fallbackLocale:'en', messages })
+const i18n = createI18n({ legacy:false, locale: defaultLang, fallbackLocale:'en', messages })
 
 
 /* ───────────── Vue アプリ ───────────── */
@@ -59,19 +57,32 @@ router.isReady().then(()=>{
 
   const load = async to=>{
     const uid = to.params.pageUid || to.query.pageUid
+    const LS_LANG = id => `tg_lang_${id}`
+    let lang = localStorage.getItem(LS_LANG(uid)) || defaultLang
+    i18n.global.locale.value = lang
     if(uid) {
       await appStore.getInfo() // ← 追加
-      await designStore.fetch(uid)
+      await designStore.fetch(uid, lang)
       // デザインデータをCSS変数として設定
       const design = designStore.data
       
+      const stamp = Date.now()          // キャッシュバスター
+
+      const rawBg =
+        design.background_url
+          || `${GCS_BASE}${GCS_BUCKET}/upload/${uid}/images/background.jpg`
+          || `${targetUrl}/upload/${uid}/images/background.jpg`
+
+      const bgUrl = `${rawBg}?v=${stamp}`
+
       if (design) {
         const root = document.documentElement
         // 背景画像の設定
+
         const img = new Image()
-        img.src = `${targetUrl}/upload/${uid}/images/background.jpg`
+        img.src = bgUrl
         img.onload = () => {
-          document.body.style.backgroundImage = `url('${targetUrl}/upload/${uid}/images/background.jpg')`
+          document.body.style.backgroundImage = `url('${bgUrl}')`
           document.body.style.backgroundSize = 'cover'
           document.body.style.backgroundPosition = 'center'
           document.body.style.backgroundAttachment = 'fixed'
@@ -98,9 +109,9 @@ router.isReady().then(()=>{
         root.style.setProperty('--font-family', design.font_family)
         
         // 背景設定
-        if (design.background_url) {
-          root.style.setProperty('--background-url', `url(${design.background_url})`)
-        }
+        const cssBg = `${rawBg}?v=${stamp}`
+        root.style.setProperty('--background-url', `url(${cssBg})`)
+
         root.style.setProperty('--bg-filter-blur', `${design.bg_filter_blur}px`)
         root.style.setProperty('--bg-filter-color', design.bg_filter_color)
         root.style.setProperty('--bg-filter-opacity', design.bg_filter_opacity)

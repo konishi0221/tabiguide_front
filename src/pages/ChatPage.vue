@@ -2,7 +2,7 @@
   <div class="chat-wrap">
 
     <div id="chat_header">
-      <img :src="  `${targetUrl}/upload/${pageUid}/images/header_logo.png`" 
+      <img :src="headerLogoSrc" 
            class="header-logo"
            @error="handleHeaderImageError"
            @load="handleHeaderImageLoad" />
@@ -24,18 +24,29 @@
         <template v-for="(m,i) in chat.messages" :key="i">
           <div :class="m.role==='bot' ? 'bot-row' : ''">
             <img v-if="m.role==='bot'" 
-              :src="`${targetUrl}/upload/${pageUid}/images/icon.png`" 
+              :src="botIconSrc" 
               class="bot-icon"
               @error="handleImageError" />
             <div
-              :class="['bubble', m.role==='bot' ? 'bubble-bot' : 'bubble-user']"
-              v-html="nl2br(m.role==='bot' ? botText(m) : m.text)" />
+              :class="['bubble', m.role==='bot' ? 'bubble-bot' : 'bubble-user']">
+
+              <!-- テキスト -->
+              <div v-if="m.role==='bot'" v-html="nl2br(botText(m))"/>
+              <div v-else v-html="nl2br(m.text)"/>
+
+              <!-- マップがあれば同じバブル内に表示 -->
+              <FacilityMap
+                v-if="m.map_json"
+                class="map-inside"
+                :pageUid="pageUid"
+                :mapJson="m.map_json" />
+            </div>
           </div>
         </template>
 
         <!-- ローディング中バブル -->
         <div v-if="chat.loading" class="bot-row">
-          <img :src="`${targetUrl}/upload/${pageUid}/images/icon.png`" 
+          <img :src="botIconSrc" 
                class="bot-icon"
                @error="handleImageError" />
           <div class="bubble bubble-bot typing">
@@ -75,11 +86,16 @@ import { useAppStore }         from '@/stores/info'
 import { storeToRefs }         from 'pinia'
 import { useViewportHeight } from '@/composables/useFooterHeight'
 import { useI18n } from 'vue-i18n'   // 追加
+import FacilityMap from '@/components/FacilityMap.vue'
 const { t } = useI18n()              // 追加
 
 
 useViewportHeight()
 const targetUrl   = import.meta.env.VITE_API_BASE        // ↔ API_TARGET
+const cacheStamp = Date.now()      // キャッシュ回避用タイムスタンプ
+
+const GCS_BASE   = 'https://storage.googleapis.com/'               // fixed
+const GCS_BUCKET = 'tabiguide_uploads'                              // bucket name
 
 
 /* ─── ストアから施設情報を取得 ─── */
@@ -91,8 +107,17 @@ const route   = useRoute()
 const pageUid = route.params.pageUid ?? 'DEMO'
 
 /* ─── 初回＆言語変更でフェッチ ─── */
-onMounted(() => {
-  appStore.getInfo()
+onMounted(async () => {
+  chat.init(pageUid)      // ★ greeting をセット
+  chat.setMode('chat')
+  await appStore.getInfo()
+
+  // DEBUG: initial map message
+  // chat.messages.unshift({
+  //   role:'bot',
+  //   text:'施設マップはこちらです',
+  //   map_json:{ map:'1', pins:[{x_pct:42.3, y_pct:75.8, label:'シャンプー' }] }
+  // })
 })
 
 /* ─── 施設名の computed （fallback 付き） ─── */
@@ -100,6 +125,26 @@ const facilityName = computed(() => {
   // JSON のキーが base.name か base['施設名'] どちらかに合わせてください
   const b = appInfo.value?.base || {}
   return b.name || b['施設名'] || ''
+})
+
+const headerLogoSrc = computed(() => {
+  if (appInfo.value?.design?.header_logo_url)
+    return `${appInfo.value.design.header_logo_url}?v=${cacheStamp}`
+
+  if (pageUid)
+    return `${GCS_BASE}${GCS_BUCKET}/upload/${pageUid}/images/header_logo.png?v=${cacheStamp}`
+
+  return `${targetUrl}/upload/${pageUid}/images/header_logo.png?v=${cacheStamp}`
+})
+
+const botIconSrc = computed(() => {
+  if (appInfo.value?.design?.icon_url)
+    return `${appInfo.value.design.icon_url}?v=${cacheStamp}`
+
+  if (pageUid)
+    return `${GCS_BASE}${GCS_BUCKET}/upload/${pageUid}/images/icon.png?v=${cacheStamp}`
+
+  return `${targetUrl}/upload/${pageUid}/images/icon.png?v=${cacheStamp}`
 })
 
 /* デザインストアから読み取り */
@@ -125,7 +170,6 @@ function autoResize () {
 }
 
 /* 初期ロード */
-chat.init(pageUid)
 
 /* helper */
 function nl2br(txt = '') {
@@ -165,8 +209,13 @@ watch(
 const showFacilityName = ref(true)
 
 function handleHeaderImageError(e) {
-  e.target.style.display = 'none'
-  showFacilityName.value = true
+  if (!e.target.dataset.fallback) {
+    e.target.dataset.fallback = '1'
+    e.target.src = `${targetUrl}/upload/${pageUid}/images/header_logo.png`
+  } else {
+    e.target.style.display = 'none'
+    showFacilityName.value = true
+  }
 }
 
 function handleHeaderImageLoad() {
@@ -174,7 +223,12 @@ function handleHeaderImageLoad() {
 }
 
 function handleImageError(e) {
-  e.target.src = defaultIcon
+  if (!e.target.dataset.fallback) {
+    e.target.dataset.fallback = '1'
+    e.target.src = `${targetUrl}/upload/${pageUid}/images/icon.png`
+  } else {
+    e.target.src = defaultIcon
+  }
 }
 </script>
 
@@ -349,3 +403,13 @@ function handleImageError(e) {
   color:var(--header-text-color);
 }
 </style>
+
+/* map inside bubble */
+.map-inside{
+  display:block;
+  margin-top:6px;
+}
+
+.map-inside .map-bubble{
+  max-width:100%;
+}

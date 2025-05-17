@@ -1,8 +1,7 @@
-<!-- src/pages/CallPage.vue -->
 <template>
 
   <div id="call">
-    <img :src="`${targetUrl}/upload/${pageUid}/images/icon.png`"
+    <img :src="iconSrc"
          id="facility_icon"
          @error="handleImageError" />
     <p id="facility_name">{{ facilityName }}</p>
@@ -40,7 +39,6 @@ import { getOption }     from '@/lib/callOption.js'
 
 const phase = ref('idle')   // ← 追加
 
-
 const timerDisp = ref(false)   // 今は使わなくてもダミーで用意
 const time      = ref(0)
 const debugLogs = ref([])      // デバッグ表示用
@@ -50,7 +48,9 @@ const { t }     = useI18n()
 const route     = useRoute()
 const pageUid   = route.params.pageUid || route.query.pageUid || ''
 const targetUrl = import.meta.env.VITE_API_BASE
+const cacheStamp = Date.now()          // 画像キャッシュ回避クエリ
 const TTS_KEY   = import.meta.env.VITE_GOOGLE_MAPS_KEY
+const GCS_BASE  = import.meta.env.VITE_GCS_BASE || ''
 
 /* ---------- stores ---------- */
 const chat = useChatStore()
@@ -64,6 +64,10 @@ const facilityName = computed(() => {
   const b = appInfo.value?.base || {}
   return b.name || b['施設名'] || ''
 })
+
+const iconSrc = ref(defaultIcon)
+const localCandidate = ref('')
+
 const active     = ref(false)
 const callState  = ref('idle')
 
@@ -71,20 +75,44 @@ const callState  = ref('idle')
 const audioPlayer = ref(null)
 
 /* ---------- helpers ---------- */
-function handleImageError (e) { e.target.src = defaultIcon }
+function handleImageError (e) {
+  if (!e.target.dataset.fallback) {
+    // first fallback → local candidate
+    e.target.dataset.fallback = '1'
+    e.target.src = localCandidate.value
+  } else {
+    // final fallback → default
+    e.target.src = defaultIcon
+  }
+}
 
 /* ---------- call ---------- */
 let call = null
 function toggle () {
   if (!call) return
-  active.value ? call.stop() : call.start()
-  active.value = !active.value
+  if (active.value) {
+    call.stop()
+    active.value = false
+  } else {
+    call.start()
+    // 強制的に最初の音声を再生
+    call.playNext?.()
+    active.value = true
+  }
 }
 
 
 
 /* ---------- lifecycle ---------- */
 onMounted(async () => {
+  // decide facility icon
+  const gcsCandidate = GCS_BASE && pageUid
+    ? `${GCS_BASE}tabiguide_uploads/upload/${pageUid}/images/icon.png?v=${cacheStamp}`
+    : ''
+  localCandidate.value = `${targetUrl}/upload/${pageUid}/images/icon.png?v=${cacheStamp}`
+
+  iconSrc.value = gcsCandidate || localCandidate.value
+
   await chat.init(pageUid)
   await useAppStore().getInfo()
 
@@ -95,8 +123,12 @@ onMounted(async () => {
     debug : import.meta.env.DEV
   })
 
+  
+  // console.log(chat.userId)
+
   call = createCall({
     pageUid,
+    userId      : chat.userId,
     chatStore   : chat,
     audioElement: audioPlayer.value,
     ttsKey      : TTS_KEY,
@@ -104,7 +136,6 @@ onMounted(async () => {
   })
   phase.value = call.phase.value          // 初期値
   watch(call.phase, v => phase.value = v) // 反映
-
 
   // call.on((ev) => { if (ev === 'state') callState.value = ev })
 })
@@ -143,6 +174,7 @@ onBeforeUnmount(() => { call?.stop() })
   width: calc(70px);
   height: 70px;
   background: var(--primary-color);
+  color: var(--tab-active-color);
   position: fixed;
   bottom: 150px;
   left: 50%;

@@ -10,8 +10,9 @@ export const useDesignStore = defineStore('design', {
     /**
      * design API を叩いてデザイン設定を取得・保存する
      * @param {string} pageUid - ページUID
+     * @param {string} [lang='ja'] - 言語コード（例 'en'）
      */
-    async fetch(pageUid) {
+    async fetch(pageUid, lang = 'ja') {
       if (!pageUid) return
       try {
         const response = await axios.get('/api/design.php', {

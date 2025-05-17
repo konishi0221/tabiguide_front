@@ -12,7 +12,7 @@ export const useAppStore = defineStore('app', {
   getters: {
     facilityName: (state) => {
       console.log('getter facilityName:', state.appInfo.base)
-      return state.appInfo.base?.name ?? '取得中'
+      return state.appInfo.base?.name ?? '...'
     }
     },
   actions: {

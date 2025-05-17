@@ -21,7 +21,11 @@ export const useChatStore = defineStore('chat', {
   actions: {
     async init (pageUid){
       localStorage.setItem('chat_user_id', this.userId)
-      this.lang   = localStorage.getItem(LANG_KEY(pageUid))   || this.lang
+      console.log('init :' + this.userId )
+      // ページ固有 → 全体共通 'lang' → 既定
+      this.lang   = localStorage.getItem(LANG_KEY(pageUid))
+                 || localStorage.getItem('lang')
+                 || this.lang
       this.chatId = localStorage.getItem(CHATID_KEY(pageUid)) || ''
 
       if (!this.chatId){
@@ -30,25 +34,29 @@ export const useChatStore = defineStore('chat', {
       }
 
       try{
-        const history = await fetchHistory(pageUid, this.chatId)
-        this.messages = history.map(h => ({
-          role    : h.role === 'user' ? 'user' : 'bot',
-          text    : h.content,
-          viaTool : false
-        }))
-
-        if (!this.messages.length){
+        // const history = await fetchHistory(pageUid, this.chatId)
+        // this.messages = history.map(h => ({
+        //   role    : h.role === 'user' ? 'user' : 'bot',
+        //   text    : h.content,
+        //   viaTool : false
+        // }))
 
         const dsg = await fetchChatSetting(pageUid, this.lang)
-    // モードによって最初のメッセージを切り替え
-         const greeting = this.mode === 'voice'
+        // モードによって最初のメッセージを切り替え
+        const greeting = this.mode === 'voice'
         ? (dsg.voice_first_message || dsg.chat_first_message)
         : (dsg.chat_first_message || dsg.voice_first_message)
         || 'こんにちは！ご質問があればどうぞ！'
 
-
-        this.messages.push({ role:'bot', text:greeting, viaTool:false })
-        }
+        // ---- debug ----
+        
+        // 履歴モードは無いので必ず greeting から開始
+        this.messages = [{
+          role:'bot',
+          text:greeting,
+          map_json:null,
+          viaTool:false
+        }]
       }catch{
         this.messages = [{
           role:'bot',
@@ -83,11 +91,30 @@ export const useChatStore = defineStore('chat', {
           mode     : this.mode
         })
 
-        console.log(data.ctx)
+        console.log(data)
+        // console.log(data.ctx)
 
         if (data.staff_called) toast.success('スタッフに連絡しました！')
 
-        this.messages.push({ role:'bot', text:data.message, viaTool:data.via_tool })
+        // parse map_json (string -> object) and log for debug
+        let mj = null
+        if (data.map_json) {
+          try {
+            mj = (typeof data.map_json === 'string')
+              ? JSON.parse(data.map_json)
+              : data.map_json
+          } catch (e) {
+            console.warn('map_json parse error:', e, data.map_json)
+          }
+        }
+        console.log('bot map_json =', mj)
+
+        this.messages.push({
+          role   :'bot',
+          text   : data.message,
+          map_json : mj,
+          viaTool: data.via_tool
+        })
         if (this.messages.length > 40) this.messages = this.messages.slice(-40)
 
         return data

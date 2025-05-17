@@ -74,6 +74,7 @@ function isActive(name) {
   right:0;
   height:55px;
   background: var(--secondary-color);  /* 紺色背景 */
+  color: var(--tab-active-color);
   display:flex;
   justify-content:space-around;
   align-items:center;

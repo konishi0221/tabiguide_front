@@ -13,7 +13,7 @@ const api = axios.create({
 // APIのベースURL設定
 const apiUrl = import.meta.env.DEV 
   ? 'http://localhost:8080'              // 開発環境
-  : 'https://tabiguide-service-364524278619.asia-northeast1.run.app/'               // 本番環境
+  : 'https://tabiguide.net/'               // 本番環境
 
 api.interceptors.response.use(
   res => res,                                  // 2xx はそのまま
@@ -31,12 +31,12 @@ api.interceptors.response.use(
 
 /* 会話履歴を取得（チャット画面初期化時） */
 export async function fetchHistory (pageUid, userId) {
-  const res = await api.post( apiUrl + '/api/chat.php', {
-    pageUid,
-    userId,
-    mode : 'history'                     // PHP 側で履歴取得を判定
-  })
-  return res.data;  // 履歴データを直接返す
+  // const res = await api.post( apiUrl + '/api/chat.php', {
+  //   pageUid,
+  //   userId,
+  //   mode : 'history'                     // PHP 側で履歴取得を判定
+  // })
+  // return res.data;  // 履歴データを直接返す
 }
 
 /* ユーザーのメッセージを送り、Bot の応答を受け取る */
@@ -57,6 +57,9 @@ export async function sendMessage (pageUid, chatId, text, datas) {
 }
 
 export function fetchChatSetting (pageUid, lang = 'ja') {
+
+  console.log(lang)
+
   return api
     .get( apiUrl + '/api/chat_setting.php', { params: { page_uid: pageUid, lang } })
     .then(res => res.data) // { chat_charactor, chat_first_message }
