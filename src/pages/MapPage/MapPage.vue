@@ -56,15 +56,7 @@ const markers    = []           // Google マーカー
 let   map, google, currentMarker = null
 
 /* ───── 定数 ───── */
-const categories = [
-  { id: 'tour',       name: t('map.categories.tour'),       icon: 'photo_camera',            color: '#007bff' },
-  { id: 'conveni',    name: t('map.categories.conveni'),    icon: 'local_convenience_store', color: '#ff3b30' },
-  { id: 'essentials', name: t('map.categories.essentials'), icon: 'shopping_bag',            color: '#4caf50' },
-  { id: 'laundry',    name: t('map.categories.laundry'),    icon: 'local_laundry_service',   color: '#00bcd4' },
-  { id: 'parking',    name: t('map.categories.parking'),    icon: 'local_parking',           color: '#9c27b0' },
-  { id: 'restaurant', name: t('map.categories.restaurant'), icon: 'restaurant',              color: '#795548' },
-  { id: 'cafe',       name: t('map.categories.cafe'),       icon: 'local_cafe',              color: '#6d4c41' }
-]
+const categories = ref([])
 
 /* 宿泊施設（ホームピン） */
 const homeStore = reactive({
@@ -78,6 +70,17 @@ const pageUid = route.params.pageUid ?? route.query.pageUid ?? null   // /:pageU
 
 /* ───── 初期化 ───── */
 onMounted(async ()=>{
+  // i18n のロード後にカテゴリを生成
+  categories.value = [
+    { id: 'tour',       name: t('map.categories.tour'),       icon: 'photo_camera',            color: '#007bff' },
+    { id: 'conveni',    name: t('map.categories.conveni'),    icon: 'local_convenience_store', color: '#ff3b30' },
+    { id: 'essentials', name: t('map.categories.essentials'), icon: 'shopping_bag',            color: '#4caf50' },
+    { id: 'laundry',    name: t('map.categories.laundry'),    icon: 'local_laundry_service',   color: '#00bcd4' },
+    { id: 'parking',    name: t('map.categories.parking'),    icon: 'local_parking',           color: '#9c27b0' },
+    { id: 'restaurant', name: t('map.categories.restaurant'), icon: 'restaurant',              color: '#795548' },
+    { id: 'cafe',       name: t('map.categories.cafe'),       icon: 'local_cafe',              color: '#6d4c41' }
+  ]
+
   if (pageUid) await designStore.fetch(pageUid)
   await fetchFacility()          // 宿泊施設
   await fetchStores()            // 周辺スポット
@@ -183,7 +186,7 @@ function addMarkers(){
         : 'home'
       colorValue = p.color || homeStore.color
     } else {
-      const catDef = categories.find(c=>c.id===p.category)
+      const catDef = categories.value.find(c=>c.id===p.category)
       iconValue  = catDef ? catDef.icon : (p.icon || 'location_on')
       colorValue = catDef ? catDef.color : (p.color || '#000')
     }

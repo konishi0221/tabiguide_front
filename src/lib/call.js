@@ -1,25 +1,17 @@
 // src/lib/call.js
 import { ref } from 'vue'
 import axios   from 'axios'
-import { recordUntilSilence as recordWithFilter } from '@/lib/soundFilter.js'
-import AudioRecorderPolyfill from 'audio-recorder-polyfill'
-
-// Safari / iOS など MediaRecorder 未実装環境向けのポリフィル
-if (typeof window !== 'undefined' && typeof window.MediaRecorder === 'undefined') {
-  window.MediaRecorder = AudioRecorderPolyfill
-}
 
 /* ---------- 定数 ---------- */
 const isIOS         = /iP(hone|od|ad)/.test(navigator.userAgent)
 const FORCE_WHISPER = import.meta.env.VITE_FORCE_WHISPER === 'true' ||
                       window.FORCE_WHISPER === true
-const silenceGap   = 1.1           // 無音閾値（秒）※最適化
-const levelThresh  = 1.2            // ノイズゲート倍率
+const silenceGap   = 0.5            // 無音閾値（秒）
+const levelThresh  = 5// 無音レベル (0-128)
+const OPENAI_KEY   = import.meta.env.VITE_OPENAI_API_KEY
 const GCP_TTS_KEY  = import.meta.env.VITE_GOOGLE_MAPS_KEY
 
 let lastSpokenText = ''             // 直前の TTS
-
-
 
 
 /* ---------- ファクトリ ---------- */
@@ -36,18 +28,9 @@ export function createCall ({
   let   recog  = null               // PC 用 SpeechRecognition
   let   micStream  = null;
 
-  /* ---- Mic control helpers (instance‑scoped) ---- */
-  function muteMic () {
-    if (micStream) micStream.getAudioTracks().forEach(t => (t.enabled = false))
-  }
-  function unmuteMic () {
-    if (micStream) micStream.getAudioTracks().forEach(t => (t.enabled = true))
-  }
-
   /* ---- Google TTS ---- */
   async function speak (text) {
     if (!text) return
-    muteMic()
     phase.value = 'speaking'
     const body = {
       input : { text: text.slice(0, 5000) },
@@ -63,41 +46,28 @@ export function createCall ({
     await new Promise(r => setTimeout(r, 200))   // 残響逃がし
     lastSpokenText = text
     audioElement.removeAttribute('src'); audioElement.load()
-    unmuteMic()
     phase.value = 'idle'
   }
 
-  /* ---- Whisper STT (iOS) ---- */
+  /* ---- Whisper STT (iOS / 強制) ---- */
   async function listenIOS () {
-    console.log('[listenIOS] call')
-    const MAX_WAIT_MS = 30000   // 30 秒でフォールバック
-    const blob = await Promise.race([
-      recordWithFilter({
-        gap   : silenceGap,
-        level : levelThresh,
-        stream: micStream
-      }),
-      new Promise(res => setTimeout(() => res(null), MAX_WAIT_MS))   // timeout → null
-    ])
-
-    if (!blob) {                 // タイムアウトまたは無音
-      console.log('[listenIOS] timeout / no blob (>', MAX_WAIT_MS ,'ms)')
-      return ''
-    }
-    console.log('[listenIOS] blob size', blob.size)
-    //  if (blob.size < 40000) return ''   // 40 kB 未満なら送らない
-    if (blob.size < 15000) return ''
-
+    const blob = await recordUntilSilence(silenceGap)
+  
+    if (blob.size < 15000) return ''  // 無音なら送らない
+  
     const fd = new FormData()
-    fd.append('audio', new File([blob], 'audio.wav', { type: 'audio/wav' }))
-    fd.append('lang', lang.slice(0, 2))     // ja / en など
-
-    const { data } = await axios.post('/api/stt.php', fd, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
-
+    fd.append('model', 'whisper-1')
+    fd.append('file', new File([blob], 'audio.webm', { type:'audio/webm' }))
+    fd.append('language', lang.slice(0,2))
+  
+    const { data } = await axios.post(
+      'https://api.openai.com/v1/audio/transcriptions',
+      fd,
+      { headers:{ Authorization:`Bearer ${OPENAI_KEY}` } }
+    )
+  
     let txt = (data.text || '').trim()
-
+  
     // ── ノイズ判定（無音時に出てくる不要フレーズを完全に除去） ──
     const noise = [
       'by H.',
@@ -108,12 +78,12 @@ export function createCall ({
       // console.log('[listenIOS] ノイズ検出:', txt)
       return ''
     }
-
+  
     // 前回と同じなら無視
     if (txt === lastSpokenText) {
       return ''
     }
-
+  
     // console.log('IOS :', txt)
     return txt
   }
@@ -141,16 +111,45 @@ export function createCall ({
 
   /* ---- STT エントリ ---- */
   function listen () {
-    console.log('[listen] decide')
-    // Web Speech API が使えるなら高速 Web 認識
-    if (!isIOS && !FORCE_WHISPER &&
-        ( 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      console.log('[listen] use WEB')
-      return listenWeb()
-    }
-    // それ以外（iOS / 強制時）は Whisper 経由で認識
-    console.log('[listen] use IOS')
-    return listenIOS()
+    if (isIOS || FORCE_WHISPER) return listenIOS()
+    return listenWeb()
+  }
+
+  /* ---- 無音で切る録音 ---- */
+  function recordUntilSilence (gap) {
+    return new Promise(async resolve => {
+      // const stream = await navigator.mediaDevices.getUserMedia({ audio:true })
+      micStream = await navigator.mediaDevices.getUserMedia({ audio:true })
+      const stream = micStream
+
+      const ctx  = new AudioContext()
+      const src  = ctx.createMediaStreamSource(stream)
+      const ana  = ctx.createAnalyser()
+      ana.fftSize = 2048; src.connect(ana)
+      const buf = new Uint8Array(ana.fftSize)
+      const rec = new MediaRecorder(stream, { mimeType:'audio/webm' })
+      const chunks=[]; rec.ondataavailable=e=>chunks.push(e.data)
+      rec.start()
+      let silent=0
+      const iv=setInterval(()=>{
+        ana.getByteTimeDomainData(buf)
+        const vol = Math.max(...buf)-128
+        silent = vol < levelThresh ? silent+50 : 0
+        if (silent >= gap*1000){ clearInterval(iv); rec.stop() }
+      },50)
+      // rec.onstop = () => resolve(new Blob(chunks,{ type:'audio/webm' }))
+      rec.onstop = () => {
+        // 録音終了時にマイクを解放
+        if (micStream) {
+          micStream.getTracks().forEach(t => t.stop());
+          micStream = null;
+        }
+        // 収集したチャンクから Blob を生成して返す
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        resolve(blob);
+      };
+
+    })
   }
 
   /* ---- GPT ---- */
@@ -171,10 +170,12 @@ export function createCall ({
 
   /* ---- 外部 API ---- */
   async function start () {
-    if (active) stop()    // 再起動時は一度停止してから続行
+    if (active) return
     active = true
     try {
-      micStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const permStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      permStream.getTracks().forEach(t => t.stop());  
+      // await navigator.mediaDevices.getUserMedia({ audio:true }) 
     }
     catch { stop(); return }
     if (greet) await speak(greet)
@@ -184,8 +185,8 @@ export function createCall ({
     active = false
     recog?.abort()
     if (micStream) {
-      micStream.getTracks().forEach(t => t.stop())
-      micStream = null
+        micStream.getTracks().forEach(t => t.stop())
+        micStream = null
     }
     audioElement.pause(); audioElement.currentTime = 0
     phase.value = 'idle'

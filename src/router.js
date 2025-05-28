@@ -3,6 +3,7 @@ import ChatPage from './pages/ChatPage.vue'
 import MapPage from './pages/MapPage/MapPage.vue'
 import InfoPage from './pages/InfoPage.vue'
 import CallPage from './pages/CallPage.vue'
+import LoginPage from './pages/LoginPage.vue'
 import LanguageSettings from './pages/LanguageSettings.vue'
 import { useChatStore } from './stores/chat'    // adjust path if alias exists
 
@@ -28,7 +29,8 @@ const router = createRouter({
     { path: '/:pageUid/map',  component: MapPage,   name: 'map'   },
     { path: '/:pageUid/info', component: InfoPage,  name: 'info'  },
     { path: '/:pageUid/langage', component: LanguageSettings,  name: 'langage'  },
-    { path: '/:pageUid/call',          name: 'call', component: CallPage }
+    { path: '/:pageUid/call',          name: 'call', component: CallPage },
+    { path: '/:pageUid/login',          name: 'login', component: LoginPage }
   ]
 });
 

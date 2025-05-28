@@ -19,10 +19,68 @@ export const useChatStore = defineStore('chat', {
   }),
 
   actions: {
+    /**
+     * 最新 limit 件の履歴を取得
+     */
+    async loadHistory (pageUid, limit = 20){
+      try{
+        const rows = await fetchHistory(pageUid, this.userId, limit)
+        console.log('[chat] fetchHistory raw =', rows)   // ← 常にログ
+        if (Array.isArray(rows) && rows.length){
+          // 古い順
+          rows.sort((a,b)=> a.id - b.id).forEach(r=>{
+            const mappedRole = (r.role === 'assistant') ? 'bot'
+                              : (r.role === 'user' ? 'user'
+                              : r.role)            // そのまま fallback
+            this.messages.push({
+              id      : r.id,           // ← 追加: メッセージID
+              role    : mappedRole,
+              text    : r.msg_text,
+              map_json: r.map_json ?? null,
+              viaTool : false
+            })
+          })
+          return true
+        } else {
+          console.log('[chat] history is empty')
+        }
+      }catch(e){
+        console.warn('[chat] history fetch error:', e.message)
+      }
+      return false
+    },
+
+    /**
+     * さらに過去の履歴を取得（スクロール時）
+     */
+    async loadMore(pageUid, limit = 20){
+      if (!this.messages.length) return
+      const oldestId = this.messages[0].id    // 先頭行の id
+      try{
+        const rows = await fetchHistory(pageUid, this.userId, limit, oldestId)
+        if (Array.isArray(rows) && rows.length){
+          rows.sort((a,b)=> a.id - b.id).forEach(r=>{
+            const mappedRole = (r.role === 'assistant') ? 'bot'
+                              : (r.role === 'user' ? 'user' : r.role)
+            this.messages.unshift({
+              id      : r.id,
+              role    : mappedRole,
+              text    : r.msg_text,
+              map_json: r.map_json ?? null,
+              viaTool : false
+            })
+          })
+        }
+      }catch(e){
+        console.warn('[chat] loadMore fetch error:', e.message)
+      }
+    },
+
     async init (pageUid){
-      localStorage.setItem('chat_user_id', this.userId)
-      console.log('init :' + this.userId )
       // ページ固有 → 全体共通 'lang' → 既定
+      if (!localStorage.getItem('chat_user_id')) {
+        localStorage.setItem('chat_user_id', this.userId)
+      }
       this.lang   = localStorage.getItem(LANG_KEY(pageUid))
                  || localStorage.getItem('lang')
                  || this.lang
@@ -33,35 +91,24 @@ export const useChatStore = defineStore('chat', {
         localStorage.setItem(CHATID_KEY(pageUid), this.chatId)
       }
 
+      // ① 直近20行の履歴を先に読み込む
+      const hasHist = await this.loadHistory(pageUid, 20)
+      if (hasHist) return    // 履歴だけ入れて終了
+
+      // ② 履歴が無いときは greeting を入れる
       try{
-        // const history = await fetchHistory(pageUid, this.chatId)
-        // this.messages = history.map(h => ({
-        //   role    : h.role === 'user' ? 'user' : 'bot',
-        //   text    : h.content,
-        //   viaTool : false
-        // }))
-
         const dsg = await fetchChatSetting(pageUid, this.lang)
-        // モードによって最初のメッセージを切り替え
         const greeting = this.mode === 'voice'
-        ? (dsg.voice_first_message || dsg.chat_first_message)
-        : (dsg.chat_first_message || dsg.voice_first_message)
-        || 'こんにちは！ご質問があればどうぞ！'
+          ? (dsg.voice_first_message || dsg.chat_first_message)
+          : (dsg.chat_first_message || dsg.voice_first_message)
+          || 'こんにちは！ご質問があればどうぞ！'
 
-        // ---- debug ----
-        
-        // 履歴モードは無いので必ず greeting から開始
         this.messages = [{
-          role:'bot',
-          text:greeting,
-          map_json:null,
-          viaTool:false
+          role:'bot', text:greeting, map_json:null, viaTool:false
         }]
       }catch{
         this.messages = [{
-          role:'bot',
-          text:'こんにちは！ご質問があればどうぞ！',
-          viaTool:false
+          role:'bot', text:'こんにちは！ご質問があればどうぞ！', viaTool:false
         }]
       }
     },
@@ -78,8 +125,11 @@ export const useChatStore = defineStore('chat', {
 
     async send (pageUid, userId, text){
       const toast = useToast()
+      const isLogin = localStorage.getItem('login') === 'true'
 
-      this.messages.push({ role:'user', text, viaTool:false })
+      console.log('[chat send] userId =', this.userId, 'login =', isLogin)
+
+      this.messages.push({ id: Date.now(), role:'user', text, viaTool:false })
       if (this.messages.length > 40) this.messages = this.messages.slice(-40)
       // console.log(this.mode)
 
@@ -88,7 +138,8 @@ export const useChatStore = defineStore('chat', {
         const data = await sendMessage(pageUid, userId, text, {
           lang     : this.lang,
           chatId   : this.chatId,
-          mode     : this.mode
+          mode     : this.mode,
+          login    : isLogin
         })
 
         console.log(data)
@@ -110,6 +161,7 @@ export const useChatStore = defineStore('chat', {
         console.log('bot map_json =', mj)
 
         this.messages.push({
+          id     : data.msg_id || Date.now(),   // APIで返さない場合は暫定
           role   :'bot',
           text   : data.message,
           map_json : mj,

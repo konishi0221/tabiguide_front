@@ -1,0 +1,207 @@
+// src/lib/call.js
+import { ref } from 'vue'
+import axios   from 'axios'
+import { recordUntilSilence as recordWithFilter } from '@/lib/soundFilter.js'
+import AudioRecorderPolyfill from 'audio-recorder-polyfill'
+import { processAudio } from '@/lib/whisper.js'   // 音量調整・16kHz 変換ヘルパ
+
+// Safari / iOS など MediaRecorder 未実装環境向けのポリフィル
+if (typeof window !== 'undefined' && typeof window.MediaRecorder === 'undefined') {
+  window.MediaRecorder = AudioRecorderPolyfill
+}
+
+/* ---------- 定数 ---------- */
+const isIOS         = /iP(hone|od|ad)/.test(navigator.userAgent)
+const FORCE_WHISPER = import.meta.env.VITE_FORCE_WHISPER === 'true' ||
+                      window.FORCE_WHISPER === true
+const silenceGap   = 1.1           // 無音閾値（秒）※最適化
+const levelThresh  = 1.2            // ノイズゲート倍率
+const GCP_TTS_KEY  = import.meta.env.VITE_GOOGLE_MAPS_KEY
+
+let lastSpokenText = ''             // 直前の TTS
+
+/* ----- Whisper WASM loader (single‑file build) ----------------------- */
+let whisperInstance = null
+async function getWhisper () {
+  if (whisperInstance) return whisperInstance
+
+  /** Vite dev/prod:
+   *  1. `import '/whisper.js?url'`  → returns URL string to file inside /public
+   *  2. dynamic import with that URL to load the actual ESM module
+   */
+  const jsUrl  = (await import(/* @vite-ignore */ '/whisper.js?url')).default
+  const { Whisper } = await import(/* @vite-ignore */ jsUrl)
+
+  whisperInstance = await Whisper.load({
+    wasmPath : null,                       // 1‑file build
+    modelPath: '/models/ggml-tiny.bin'
+  })
+  return whisperInstance
+}
+
+
+
+
+/* ---------- ファクトリ ---------- */
+export function createCall ({
+  pageUid      = '',
+  chatStore    = null,
+  audioElement = null,
+  greet        = '',
+  lang         = 'ja-JP',
+  voiceName    = 'ja-JP-Wavenet-A'
+}) {
+  const phase = ref('idle')
+  let   active = false
+  let   recog  = null               // PC 用 SpeechRecognition
+
+  /* ---- Google TTS ---- */
+  async function speak (text) {
+    // stop any ongoing speech‑recognition while bot is speaking
+    if (recog && typeof recog.abort === 'function') {
+      try { recog.abort() } catch (_) {}
+    }
+    if (!text) return
+    phase.value = 'speaking'
+    const body = {
+      input : { text: text.slice(0, 5000) },
+      voice : { languageCode: lang, name: voiceName },
+      audioConfig: { audioEncoding:'MP3', speakingRate:1.2 }
+    }
+    const { data } = await axios.post(
+      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GCP_TTS_KEY}`,
+      body
+    )
+    audioElement.src = `data:audio/mp3;base64,${data.audioContent}`
+    await new Promise(ok => { audioElement.onended = ok; audioElement.play().catch(ok) })
+    await new Promise(r => setTimeout(r, 200))   // 残響逃がし
+    lastSpokenText = text
+    audioElement.removeAttribute('src'); audioElement.load()
+    phase.value = 'idle'
+  }
+
+  /* ---- Whisper STT (iOS) ---- */
+  async function listenIOS () {
+    // console.log('[listenIOS] call')
+    const MAX_WAIT_MS = 30000   // 30 秒でフォールバック
+    const blob = await Promise.race([
+      recordWithFilter({
+        gap   : silenceGap,
+        level : levelThresh,
+        stream: null            // 毎回 getUserMedia()
+      }),
+      new Promise(res => setTimeout(() => res(null), MAX_WAIT_MS))   // timeout → null
+    ])
+
+    if (!blob) {                 // タイムアウトまたは無音
+      console.log('[listenIOS] timeout / no blob (>', MAX_WAIT_MS ,'ms)')
+      return ''
+    }
+    console.log('[listenIOS] blob size', blob.size)
+    //  if (blob.size < 40000) return ''   // 40 kB 未満なら送らない
+    if (blob.size < 15000) return ''
+
+    let txt = ''
+    try {
+      if (FORCE_WHISPER) {
+        /* ---- local Whisper WASM ---- */
+        const w   = await getWhisper()
+        const pcm = await processAudio(blob, 48000)   // to Float32 16 kHz peak‑norm
+        txt = (await w.fullTranscribe(pcm, lang.slice(0,2))).trim()
+      }
+    } catch (err) {
+      console.error('[listenIOS] whisper error:', err)
+    }
+
+    if (!txt) {
+      /* ---- fallback: remote STT API ---- */
+      const fd = new FormData()
+      fd.append('audio', new File([blob], 'audio.wav', { type: 'audio/wav' }))
+      fd.append('lang', lang.slice(0, 2))     // ja / en など
+      const { data } = await axios.post('/api/stt.php', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      txt = (data.text || '').trim()
+    }
+
+    /* ---- ノイズ判定 ---- */
+    const noise = [
+      'by H.',
+      'ご視聴ありがとうございました。'
+    ]
+    if (noise.some(n => txt.includes(n))) return ''
+    if (txt === lastSpokenText) return ''
+
+    // console.log('IOS :', txt)
+    return txt
+  }
+  
+  /* ---- PC/Android: Web Speech ---- */
+  function listenWeb () {
+    return new Promise(res => {
+      const API = window.SpeechRecognition || window.webkitSpeechRecognition
+      if (!API) return res('')
+      phase.value = 'listening'
+      recog = new API()
+      recog.lang = lang
+      recog.interimResults = false
+      recog.continuous     = false
+      recog.onresult = e => {
+        const txt = e.results[0][0].transcript.trim()
+        phase.value = 'idle'
+        console.log('WEB :' + txt)
+        res(txt === lastSpokenText ? '' : txt)
+      }
+      const end = () => { phase.value = 'idle'; res('') }
+      recog.onerror = end; recog.onend = end; recog.start()
+    })
+  }
+
+  /* ---- STT エントリ ---- */
+  function listen () {
+    // Web Speech API が使えるなら高速 Web 認識
+    if (window.webkitSpeechRecognition || window.SpeechRecognition) {
+      console.log('[listen] use WEB')
+      return listenWeb()
+    }
+    // if (!isIOS && !FORCE_WHISPER &&
+    //     ( 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    //   console.log('[listen] use WEB')
+    //   return listenWeb()
+    // }
+    // それ以外（iOS / 強制時）は Whisper 経由で認識
+    return listenIOS()
+  }
+
+  /* ---- GPT ---- */
+  async function askGPT (text) {
+    const r = await chatStore.send(pageUid, chatStore.userId, text)
+    return r?.message || r
+  }
+
+  /* ---- ループ ---- */
+  async function loop () {
+    if (!active) return
+    const user = await listen()
+    if (!user) return loop()
+    const reply = await askGPT(user)
+    await speak(reply)
+    loop()
+  }
+
+  /* ---- 外部 API---- */
+  async function start () {
+    if (active) stop()    // 再起動時は一度停止してから続行
+    active = true
+    if (greet) await speak(greet)
+    loop()
+  }
+  function stop () {
+    active = false
+    recog?.abort()
+    audioElement.pause(); audioElement.currentTime = 0
+    phase.value = 'idle'
+  }
+
+  return { start, stop, phase }
+}

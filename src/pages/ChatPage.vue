@@ -19,7 +19,7 @@
 
 
     <!-- ▸ メッセージ一覧 -->
-    <div id="message_wrap">
+    <div id="message_wrap" ref="messageWrapRef" @scroll="handleScroll">
       <div ref="listRef" class="msg-list">
         <template v-for="(m,i) in chat.messages" :key="i">
           <div :class="m.role==='bot' ? 'bot-row' : ''">
@@ -89,6 +89,7 @@ import { useI18n } from 'vue-i18n'   // 追加
 import FacilityMap from '@/components/FacilityMap.vue'
 const { t } = useI18n()              // 追加
 
+const messageWrapRef = ref(null)
 
 useViewportHeight()
 const targetUrl   = import.meta.env.VITE_API_BASE        // ↔ API_TARGET
@@ -207,6 +208,23 @@ watch(
 )
 
 const showFacilityName = ref(true)
+
+/** スクロール最上部で過去履歴を追加取得 */
+async function handleScroll () {
+  const el = messageWrapRef.value
+  if (!el) return
+
+  // 上端に到達
+  if (el.scrollTop === 0 && !chat.loading) {
+    const prevHeight = el.scrollHeight
+    await chat.loadMore(pageUid, 20)   // 追加取得
+
+    // 追加行でスクロール位置が跳ねないよう補正
+    await nextTick()
+    const newHeight = el.scrollHeight
+    el.scrollTop = newHeight - prevHeight
+  }
+}
 
 function handleHeaderImageError(e) {
   if (!e.target.dataset.fallback) {
@@ -402,8 +420,6 @@ function handleImageError(e) {
   font-variation-settings:'FILL' 1,'GRAD' 0,'opsz' 48;
   color:var(--header-text-color);
 }
-</style>
-
 /* map inside bubble */
 .map-inside{
   display:block;
@@ -413,3 +429,4 @@ function handleImageError(e) {
 .map-inside .map-bubble{
   max-width:100%;
 }
+</style>

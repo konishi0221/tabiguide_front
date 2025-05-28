@@ -137,7 +137,7 @@ function recalcHeights() {
 // ドラッグ操作
 let startY = 0, startHeight = 0
 function handleDown(e) {
-  const evtY = e.touches ? e.touches[0].pageY : e.pageY
+  const evtY = e.touches ? e.touches[0].clientY : e.clientY
   startHeight = parseFloat(getComputedStyle(panel.value).height)
   startY = evtY
   window.addEventListener('mousemove', handleMove)
@@ -146,7 +146,7 @@ function handleDown(e) {
   window.addEventListener('touchend', handleUp)
 }
 function handleMove(e) {
-  const currentY = e.touches ? e.touches[0].pageY : e.pageY
+  const currentY = e.touches ? e.touches[0].clientY : e.clientY
   const diff = currentY - startY
   let newHeight = startHeight - diff
   if (newHeight >= halfHeight) {
@@ -165,7 +165,7 @@ function handleUp(e) {
   window.removeEventListener('mouseup', handleUp)
   window.removeEventListener('touchmove', handleMove)
   window.removeEventListener('touchend', handleUp)
-  const endY = e.changedTouches ? e.changedTouches[0].pageY : e.pageY
+  const endY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY
   const diff = endY - startY
   const SNAP = 40
   const downThreshold = state.value === 'full' ? SNAP * 2 : SNAP
